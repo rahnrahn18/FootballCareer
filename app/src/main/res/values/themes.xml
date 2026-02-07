@@ -1,0 +1,32 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Championstar" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Baris colorPrimary dihapus karena tidak digunakan dalam game kita -->
+    </style>
+
+    <style name="Theme.Championstar" parent="Base.Theme.Championstar" />
+
+    <!-- Tema khusus untuk semua activity game -->
+    <style name="Theme.Championstar.Game" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+    
+    <!-- Style untuk tombol-tombol di Dashboard -->
+    <style name="DashboardButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_rowWeight">1</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">@drawable/bg_tombol_menu</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    
+    
+    <style name="RoundedImageView">
+    <item name="cornerFamily">rounded</item>
+    <item name="cornerSize">50%</item>
+</style>
+</resources>

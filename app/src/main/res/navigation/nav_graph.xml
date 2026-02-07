@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/mainMenuFragment">
+
+    <fragment
+        android:id="@+id/mainMenuFragment"
+        android:name="com.championstar.soccer.ui.mainmenu.MainMenuFragment"
+        android:label="fragment_main_menu"
+        tools:layout="@layout/fragment_main_menu">
+        <action
+            android:id="@+id/action_mainMenuFragment_to_characterCreationFragment"
+            app:destination="@id/characterCreationFragment" />
+        <action
+            android:id="@+id/action_mainMenuFragment_to_dashboardFragment"
+            app:destination="@id/dashboardFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/characterCreationFragment"
+        android:name="com.championstar.soccer.ui.creation.CharacterCreationFragment"
+        android:label="fragment_character_creation"
+        tools:layout="@layout/fragment_character_creation">
+        <action
+            android:id="@+id/action_characterCreationFragment_to_dashboardFragment"
+            app:destination="@id/dashboardFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.championstar.soccer.ui.dashboard.DashboardFragment"
+        android:label="Dashboard"
+        tools:layout="@layout/fragment_dashboard_compact">
+        <!-- NAMA ARGUMEN DIPERBAIKI MENJADI snake_case -->
+        <argument
+            android:name="player_profile"
+            app:argType="com.championstar.soccer.data.model.PlayerProfile" />
+        <argument
+            android:name="player_attributes"
+            app:argType="com.championstar.soccer.data.model.PlayerAttributes" />
+        <argument
+            android:name="loaded_player"
+            app:argType="com.championstar.soccer.data.model.Player"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <!-- AKSI BARU UNTUK NAVIGASI KE DAFTAR LIGA -->
+        <action
+            android:id="@+id/action_dashboardFragment_to_leagueListFragment"
+            app:destination="@id/leagueListFragment" />
+    </fragment>
+
+    <!-- FRAGMENT BARU UNTUK MENAMPILKAN DAFTAR LIGA -->
+    <fragment
+        android:id="@+id/leagueListFragment"
+        android:name="com.championstar.soccer.ui.world.LeagueListFragment"
+        android:label="Leagues"
+        tools:layout="@layout/fragment_league_list" >
+        <action
+            android:id="@+id/action_leagueListFragment_to_clubListFragment"
+            app:destination="@id/clubListFragment" />
+    </fragment>
+
+    <!-- FRAGMENT BARU UNTUK MENAMPILKAN DAFTAR KLUB -->
+    <fragment
+        android:id="@+id/clubListFragment"
+        android:name="com.championstar.soccer.ui.world.ClubListFragment"
+        android:label="Clubs"
+        tools:layout="@layout/fragment_club_list" >
+        <argument
+            android:name="league_id"
+            app:argType="integer" />
+        <argument
+            android:name="league_name"
+            app:argType="string" />
+    </fragment>
+
+</navigation>

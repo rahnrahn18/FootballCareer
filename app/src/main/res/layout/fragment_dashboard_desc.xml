@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/pitch_background"
+    tools:context=".ui.dashboard.DashboardFragment">
+
+    <!-- 1. TOP STATUS BAR -->
+<LinearLayout
+    android:id="@+id/top_status_bar"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    android:background="@drawable/bg_panel_dark"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent">
+
+    <TextView
+        android:id="@+id/tv_current_date"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="Sen, 1 Jul 2025" />
+
+    <TextView
+        android:id="@+id/tv_player_cash"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:textColor="#4CAF50"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="$500" />
+
+    <TextView
+        android:id="@+id/tv_player_energy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#FFEB3B"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="100 ⚡" />
+</LinearLayout>
+
+
+    <!-- 2. PANEL PEMAIN -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/player_panel"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_panel_dark"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/top_status_bar"
+        app:layout_constraintWidth_percent="0.35">
+
+        <ImageView
+            android:id="@+id/img_player_avatar"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@drawable/char_1" />
+
+        <TextView
+            android:id="@+id/tv_player_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/img_player_avatar"
+            tools:text="Player Name" />
+
+        <TextView
+            android:id="@+id/tv_player_club"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#CCCCCC"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_player_name"
+            tools:text="Unattached" />
+
+        <TextView
+            android:id="@+id/tv_title_core_stats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="CORE STATS"
+            android:textColor="@android:color/white"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_player_club" />
+
+        <TextView
+            android:id="@+id/tv_stat_attack"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_title_core_stats"
+            tools:text="Finishing: 5" />
+
+        <TextView
+            android:id="@+id/tv_stat_speed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_stat_attack"
+            tools:text="Speed: 5" />
+
+        <TextView
+            android:id="@+id/tv_stat_stamina"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@android:color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_stat_speed"
+            tools:text="Stamina: 5" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 3. GRID TOMBOL FITUR -->
+   <!-- 3. GRID IKON FITUR -->
+<androidx.recyclerview.widget.RecyclerView
+    android:id="@+id/recycler_view_feature_icons"
+    android:layout_width="0dp"
+    android:layout_height="0dp"
+    android:layout_margin="16dp"
+    android:clipToPadding="false"
+    android:padding="8dp"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toEndOf="@id/player_panel"
+    app:layout_constraintTop_toBottomOf="@id/top_status_bar"
+    tools:listitem="@layout/item_feature_icon" />
+
+
+    <!-- 4. OVERLAY TRAINING -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/training_panel_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#D0000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_panel_dark"
+            android:orientation="vertical"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="TRAINING CENTER"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_train_attack"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_tombol_menu"
+                android:text="Train Attack (-10 Energy)"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/btn_train_defense"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_tombol_menu"
+                android:text="Train Defense (-10 Energy)"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/btn_train_technique"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:layout_width="300dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_tombol_menu"
+                android:text="Train Technique (-10 Energy)"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/btn_close_training_panel"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:text="Close"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 5. OVERLAY AGENT -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/agent_selection_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#D0000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_panel_dark"
+            android:orientation="vertical"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.8">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="CHOOSE YOUR AGENT"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:text="Your first agent will shape the start of your career. Choose wisely."
+                android:textAlignment="center"
+                android:textColor="#CCCCCC" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_view_agents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:listitem="@layout/item_agent_choice"
+                tools:orientation="horizontal" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 6. OVERLAY SPONSOR -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/sponsorship_offer_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#D0000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_panel_dark"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SPONSORSHIP OFFER"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/img_sponsor_logo"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_marginTop="16dp"
+                tools:src="@drawable/ic_launcher_background" />
+
+            <TextView
+                android:id="@+id/tv_sponsor_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                tools:text="Kinetik Footwear" />
+
+            <TextView
+                android:id="@+id/tv_sponsor_payout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="#4CAF50"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="$55.25 / week" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="for a 1-year contract"
+                android:textColor="#CCCCCC" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_decline_sponsor"
+                    style="?android:attr/buttonBarButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="Decline" />
+
+                <Button
+                    android:id="@+id/btn_accept_sponsor"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Accept" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 7. OVERLAY SHOP -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/shop_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#E6000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="24dp"
+            android:background="@drawable/bg_panel_dark"
+            android:orientation="vertical"
+            android:padding="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EQUIPMENT SHOP"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_view_shop"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="16dp"
+                android:layout_weight="1"
+                tools:listitem="@layout/item_shop" />
+
+            <Button
+                android:id="@+id/btn_close_shop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:text="Close" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 8. OVERLAY TRIAL -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/trial_offer_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#D0000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_panel_dark"
+            android:orientation="vertical"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="TRIAL OFFERS"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:text="Your agent has found some opportunities. This is your chance!"
+                android:textAlignment="center"
+                android:textColor="#CCCCCC" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_view_trial_offers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 9. OVERLAY KONTRAK -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contract_offer_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#D0000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_panel_dark"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CONTRACT OFFER"
+                android:textColor="@android:color/white"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/img_contract_club_logo"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_marginTop="16dp"
+                tools:src="@drawable/ic_launcher_background" />
+
+            <TextView
+                android:id="@+id/tv_contract_club_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                tools:text="Northwood FC" />
+
+            <TextView
+                android:id="@+id/tv_contract_wage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="#4CAF50"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="$250 / week" />
+
+            <TextView
+                android:id="@+id/tv_contract_details"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#CCCCCC"
+                tools:text="1 year contract as a Reserve Player" />
+
+            <Button
+                android:id="@+id/btn_accept_contract"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Sign Contract" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 10. OVERLAY PERTANDINGAN -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/match_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/pitch_background"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- Panel Skor -->
+        <LinearLayout
+            android:id="@+id/score_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_panel_dark"
+            android:orientation="horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/tv_home_team_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                tools:text="My Club" />
+
+            <TextView
+                android:id="@+id/tv_score"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="0 - 0" />
+
+            <TextView
+                android:id="@+id/tv_away_team_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                tools:text="Opponent" />
+        </LinearLayout>
+
+        <!-- Log Komentar -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view_commentary"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_margin="24dp"
+            android:background="@drawable/bg_panel_dark"
+            app:layout_constraintBottom_toTopOf="@+id/key_moment_panel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/score_panel" />
+
+        <!-- Panel Pilihan Momen Krusial -->
+        <LinearLayout
+            android:id="@+id/key_moment_panel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="24dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tv_key_moment_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_panel_dark"
+                android:padding="12dp"
+                android:textAlignment="center"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                tools:text="You have a clear sight of goal!" />
+
+            <Button
+                android:id="@+id/btn_choice_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                tools:text="Power shot" />
+
+            <Button
+                android:id="@+id/btn_choice_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="Finesse shot" />
+
+            <Button
+                android:id="@+id/btn_choice_3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="Pass" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
