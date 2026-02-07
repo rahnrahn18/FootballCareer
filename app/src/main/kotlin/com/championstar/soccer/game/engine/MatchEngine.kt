@@ -1,104 +1,88 @@
 package com.championstar.soccer.game.engine
 
-import com.championstar.soccer.data.model.*
-import com.championstar.soccer.game.league.LeagueManager
+import com.championstar.soccer.data.entities.PlayerEntity
 import kotlin.random.Random
 
-object MatchEngine {
+data class MatchResult(
+    val scorePlayerTeam: Int,
+    val scoreOpponent: Int,
+    val commentary: List<String>,
+    val playerRating: Float,
+    val goals: Int,
+    val assists: Int
+)
 
-    private var currentMinute = 0
-    private var playerScore = 0
-    private var opponentScore = 0
-    private lateinit var player: Player
-    private lateinit var opponent: Club
-    private var leagueId: Int = -1
+class MatchEngine {
 
-    val commentaryLog = mutableListOf<MatchCommentary>()
+    fun simulateMatch(player: PlayerEntity, opponentStrength: Int): MatchResult {
+        val commentary = mutableListOf<String>()
+        var scorePlayerTeam = 0
+        var scoreOpponent = 0
+        var goals = 0
+        var assists = 0
+        var performanceScore = 6.0f
 
-    fun startMatch(player: Player, opponent: Club, leagueId: Int) {
-        this.player = player
-        this.opponent = opponent
-        this.leagueId = leagueId
-        currentMinute = 0
-        playerScore = 0
-        opponentScore = 0
-        commentaryLog.clear()
-        commentaryLog.add(MatchCommentary(0, "Kick-off! The match between ${player.club.name} and ${opponent.name} has begun."))
-    }
+        commentary.add("Match Start! ${player.teamName} vs Opponent (Strength: $opponentStrength)")
 
-    fun simulateMinute(): KeyMoment? {
-        currentMinute++
-        if (currentMinute > 90) {
-            endMatch()
-            return null
-        }
+        // Simple simulation logic based on 90 mins (simulated in chunks)
+        for (minute in 1..90 step 10) {
+            val eventRoll = Random.nextInt(100)
 
-        // FOUNDATION: Opponent scoring logic
-        val opponentAttackChance = opponent.reputation / 1500.0 // e.g., 85 rep = ~5.6% chance per minute
-        if (Random.nextDouble() < opponentAttackChance) {
-            val playerClubDefense = (player.club.reputation + player.attributes.technical.tackling) / 2.0
-            val opponentAttack = opponent.reputation * (1 + Random.nextDouble(-0.2, 0.2)) // Add variability
-            if (opponentAttack > playerClubDefense) {
-                opponentScore++
-                commentaryLog.add(MatchCommentary(currentMinute, "Goal for ${opponent.name}! They've broken through the defense."))
+            // Influence of player skills
+            val speed = player.skills["Speed"] ?: 50
+            val shooting = player.skills["Shooting"] ?: 50
+            val passing = player.skills["Passing"] ?: 50
+
+            // Determine possession/action based on overall rating vs opponent
+            val teamStrength = 70 + (player.overallRating / 10) // Basic team strength calculation
+
+            if (eventRoll < (teamStrength - opponentStrength + 50)) {
+                // Player's team attacking
+                if (Random.nextInt(100) < 30) {
+                    // Player involved
+                    if (Random.nextInt(100) < (shooting + speed) / 2) {
+                        goals++
+                        scorePlayerTeam++
+                        performanceScore += 1.0f
+                        commentary.add("$minute': GOAL!! ${player.name} scores with a brilliant finish!")
+                    } else if (Random.nextInt(100) < passing) {
+                        assists++
+                        scorePlayerTeam++
+                        performanceScore += 0.5f
+                        commentary.add("$minute': GOAL! Great assist by ${player.name} to a teammate.")
+                    } else {
+                        commentary.add("$minute': ${player.name} shoots but misses narrowly.")
+                    }
+                } else {
+                    // Teammate scores/misses
+                    if (Random.nextBoolean()) {
+                        scorePlayerTeam++
+                        commentary.add("$minute': GOAL for ${player.teamName}!")
+                    } else {
+                        commentary.add("$minute': ${player.teamName} attacks but fails to convert.")
+                    }
+                }
+            } else {
+                // Opponent attacking
+                if (Random.nextInt(100) < 40) {
+                    scoreOpponent++
+                    performanceScore -= 0.1f
+                    commentary.add("$minute': Goal for Opponent. Defense was caught napping.")
+                } else {
+                    commentary.add("$minute': Opponent pushes forward but is stopped.")
+                }
             }
         }
 
-        // Chance for a key moment to occur (e.g., 10% each minute)
-        if (Random.nextDouble() < 0.10) {
-            return generateKeyMoment()
-        }
+        commentary.add("Full Time: ${player.teamName} $scorePlayerTeam - $scoreOpponent Opponent")
 
-        commentaryLog.add(MatchCommentary(currentMinute, "The ball is being passed around in the midfield."))
-        return null
-    }
-
-    private fun generateKeyMoment(): KeyMoment {
-        return KeyMoment(
-            minute = currentMinute,
-            description = "You've found space outside the box and have a clear sight of goal!",
-            choices = listOf(
-                PlayerChoice("Power shot to the corner", BuffType.FINISHING, BuffType.STAMINA),
-                PlayerChoice("Finesse shot around the keeper", BuffType.DRIBBLING, BuffType.FINISHING),
-                PlayerChoice("Look for a pass to a teammate", BuffType.TACKLING, BuffType.NONE)
-            )
+        return MatchResult(
+            scorePlayerTeam,
+            scoreOpponent,
+            commentary,
+            performanceScore.coerceIn(1.0f, 10.0f),
+            goals,
+            assists
         )
-    }
-
-    fun resolvePlayerChoice(choice: PlayerChoice): Boolean {
-        val primaryStat = getAttributeValue(choice.primaryAttribute)
-        val secondaryStat = getAttributeValue(choice.secondaryAttribute)
-        val successThreshold = (primaryStat + secondaryStat) / 2.0
-        val diceRoll = Random.nextInt(1, 100)
-        val success = diceRoll < successThreshold
-
-        if (success) {
-            playerScore++
-            commentaryLog.add(MatchCommentary(currentMinute, "GOAL! A brilliant decision by ${player.profile.name} pays off!"))
-            player.careerStats.goals++ // Track stats
-        } else {
-            commentaryLog.add(MatchCommentary(currentMinute, "Oh, what a miss! The chance goes begging."))
-        }
-        return success
-    }
-
-    private fun getAttributeValue(type: BuffType): Int {
-        return when (type) {
-            BuffType.FINISHING -> player.attributes.technical.finishing
-            BuffType.SPEED -> player.attributes.physical.sprintSpeed
-            BuffType.DRIBBLING -> player.attributes.technical.dribbling
-            BuffType.STAMINA -> player.attributes.physical.stamina
-            BuffType.TACKLING -> player.attributes.technical.tackling
-            else -> 5
-        }
-    }
-
-    fun getScore(): Pair<Int, Int> = Pair(playerScore, opponentScore)
-
-    fun endMatch() {
-        if (leagueId != -1) {
-            LeagueManager.recordMatch(leagueId, player.club.id, opponent.id, playerScore, opponentScore)
-        }
-        player.careerStats.appearances++ // Track stats
     }
 }
