@@ -25,52 +25,81 @@ import com.championstar.soccer.domain.models.Team
 import com.championstar.soccer.simulation.engine.*
 import com.championstar.soccer.ui.screens.*
 import com.championstar.soccer.ui.theme.ChampionstarTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        var worldLeagues = WorldGenerator.generateWorld()
+
+        // Removed World Generation from Main Thread here.
+        // It will be handled in the UI via Coroutines.
+
         setContent {
             ChampionstarTheme {
-                RootNavigation(
-                    initialLeagues = worldLeagues,
-                    onWorldRegenerated = { worldLeagues = it }
-                )
+                RootNavigation()
             }
         }
     }
 }
 
 @Composable
-fun RootNavigation(
-    initialLeagues: List<League>,
-    onWorldRegenerated: (List<League>) -> Unit
-) {
+fun RootNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var player by remember { mutableStateOf<Player?>(null) }
-    var leagues by remember { mutableStateOf(initialLeagues) }
+    var leagues by remember { mutableStateOf<List<League>>(emptyList()) }
     var hasSave by remember { mutableStateOf(GameStorage.hasSaveGame(context)) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = Color(0xFFFFD700))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Simulating World... Please Wait", color = Color.White)
+            }
+        }
+        return
+    }
 
     NavHost(navController = navController, startDestination = "main_menu") {
         composable("main_menu") {
             MainMenuScreen(
                 hasSaveGame = hasSave,
                 onNewGame = {
-                    GameStorage.deleteSave(context)
-                    val newWorld = WorldGenerator.generateWorld()
-                    onWorldRegenerated(newWorld)
-                    leagues = newWorld
-                    navController.navigate("character_creation")
+                    scope.launch {
+                        isLoading = true
+                        GameStorage.deleteSave(context)
+                        // Generate World on IO Thread
+                        val newWorld = withContext(Dispatchers.IO) {
+                            WorldGenerator.generateWorld()
+                        }
+                        leagues = newWorld
+                        isLoading = false
+                        navController.navigate("character_creation")
+                    }
                 },
                 onLoadGame = {
-                    val savedState = GameStorage.loadGame(context)
-                    if (savedState != null) {
-                        player = savedState.player
-                        leagues = savedState.leagues
-                        navController.navigate("main_game")
+                    scope.launch {
+                        isLoading = true
+                        // Load Game on IO Thread
+                        val savedState = withContext(Dispatchers.IO) {
+                            GameStorage.loadGame(context)
+                        }
+                        if (savedState != null) {
+                            player = savedState.player
+                            leagues = savedState.leagues
+                            isLoading = false
+                            navController.navigate("main_game")
+                        } else {
+                            isLoading = false
+                            // Handle load error
+                        }
                     }
                 }
             )
@@ -78,20 +107,31 @@ fun RootNavigation(
         composable("character_creation") {
             CharacterCreationScreen(
                 onCharacterCreated = { newPlayer ->
-                    player = newPlayer
-                    val trialOffers = CareerEngine.generateTrialOffers(newPlayer, leagues)
-                    if (trialOffers.isNotEmpty()) {
-                        val (team, contract) = trialOffers.first()
-                        newPlayer.contract = contract
-                        val targetTeam = leagues.flatMap { it.teams }.find { it.id == team.id }
-                        targetTeam?.players?.add(newPlayer)
-                    } else {
-                        val fallback = leagues.last().teams.first()
-                        fallback.players.add(newPlayer)
+                    scope.launch {
+                        isLoading = true
+                        player = newPlayer
+
+                        // Process trial logic
+                        val trialOffers = CareerEngine.generateTrialOffers(newPlayer, leagues)
+                        if (trialOffers.isNotEmpty()) {
+                            val (team, contract) = trialOffers.first()
+                            newPlayer.contract = contract
+                            val targetTeam = leagues.flatMap { it.teams }.find { it.id == team.id }
+                            targetTeam?.players?.add(newPlayer)
+                        } else {
+                            val fallback = leagues.last().teams.first()
+                            fallback.players.add(newPlayer)
+                        }
+
+                        // Save on IO Thread
+                        withContext(Dispatchers.IO) {
+                            GameStorage.saveGame(context, newPlayer, leagues)
+                        }
+                        hasSave = true
+                        isLoading = false
+
+                        navController.navigate("main_game") { popUpTo("main_menu") { inclusive = true } }
                     }
-                    GameStorage.saveGame(context, newPlayer, leagues)
-                    hasSave = true
-                    navController.navigate("main_game") { popUpTo("main_menu") { inclusive = true } }
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -101,7 +141,13 @@ fun RootNavigation(
                 MainGameScreen(
                     player = player!!,
                     leagues = leagues,
-                    onSave = { GameStorage.saveGame(context, player!!, leagues) },
+                    onSave = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                GameStorage.saveGame(context, player!!, leagues)
+                            }
+                        }
+                    },
                     onExit = { navController.navigate("main_menu") { popUpTo("main_game") { inclusive = true } } }
                 )
             } else {
@@ -172,8 +218,6 @@ fun MainGameScreen(
         composable("ranking") { FullscreenScreenWithBack(navController) { RankingScreen() } }
         composable("achievements") { FullscreenScreenWithBack(navController) { AchievementScreen(player) } }
         composable("match") {
-             // For testing, find the player's team and a random opponent.
-             // In a real flow, this would be passed from a "Pre-Match" event.
              val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
              val opponent = leagues.flatMap { it.teams }.filter { it.id != team?.id }.randomOrNull()
 
@@ -184,13 +228,11 @@ fun MainGameScreen(
                         team = team,
                         opponent = opponent,
                         onMatchEnd = { h, a ->
-                            // Go back after match
                             navController.popBackStack()
                         }
                     )
                 }
              } else {
-                 // Fallback if no team found
                  LaunchedEffect(Unit) { navController.popBackStack() }
              }
         }
