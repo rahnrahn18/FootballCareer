@@ -1,6 +1,6 @@
-# Championstar Soccer - Developer Documentation v2.0
+# Championstar Soccer - Developer Documentation v2.1
 
-## âš ï¸ CURRENT STATUS: PROTOTYPE (10% COMPLETE)
+## âš ï¸  CURRENT STATUS: PROTOTYPE (15% COMPLETE)
 **This project is in early development.** While the core loop and UI framework are in place, many systems are placeholders or disconnected. Future developers must read the "Known Issues & Roadmap" section before starting work.
 
 ---
@@ -31,9 +31,9 @@ The project follows a modular, Domain-Driven Design (DDD) structure:
     *   `TimeEngine`: Manages the daily turn loop (`GameTurnEvent`).
     *   `EventEngine`: Generates categorized stories (Match, Family, Agent).
     *   `EconomyEngine`: Handles wages, business income.
-    *   `MatchEngine`: Simulates match outcomes (currently instant simulation).
+    *   `MatchEngine`: Simulates match outcomes (interactive & background).
 *   **`ui/`**:
-    *   `screens/`: `DashboardScreen`, `MatchScreen`, `BusinessScreen`, etc.
+    *   `screens/`: `DashboardScreen`, `MatchScreen`, `TrainingScreen`, `RunnerGameScreen`, etc.
     *   `components/`: Reusable widgets (`AssetLoader`, `PitchBackground`).
     *   `theme/`: `Theme.kt` (Dark/Gold aesthetics).
 
@@ -48,22 +48,28 @@ Instead of a "Next Week" button, the game uses a **Daily Event Box**.
     *   `MatchEvent`: Result of a match (simulated).
     *   `RoutineEvent`: Generic training day.
 
+### Match Visualizer & Interactive Decisions
+*   **MatchEngine:** Supports minute-by-minute simulation.
+*   **MatchScreen:** Features a 2D Canvas visualizer (Pitch, Players, Ball).
+*   **Interaction:** Pauses 4-7 times per match for user decisions (Pass/Shoot/Tackle) if the player is a starter.
+
+### Minigames (Training)
+*   **TrainingScreen:** Hub for improving player stats.
+*   **Penalty Kick:** Timing-based minigame.
+*   **Passing Drill:** Precision angle minigame.
+*   **Endurance Run:** Side-scrolling obstacle runner (Quest).
+
 ### Economy & Business
 Players can invest in businesses (`BusinessDatabase`) to earn weekly passive income.
 *   **Logic:** `EconomyEngine.processWeeklyFinances`.
 *   **Currency:** `STAR` (Gameplay) and `GLORY` (Premium).
 
-### Match Simulation
-*   **Current:** `MatchEngine` simulates the entire game instantly using Poisson distribution.
-*   **Future:** `MatchScreen` contains a minute-by-minute interactive simulation loop, but it is currently **disconnected** from the main `TimeEngine` flow.
-
-## 5. Known Issues & Roadmap (The "90%" Remaining)
+## 5. Known Issues & Roadmap (The "85%" Remaining)
 
 ### ðŸ”´ Critical Bugs / incomplete Features
-1.  **Match Integration:** The interactive `MatchScreen` exists but is not triggered by `TimeEngine`. Matches are currently simulated instantly in the background. **Next Step:** Integrate `MatchScreen` into the event loop so users play the match instead of just seeing the result.
-2.  **Date Persistence:** Loading a saved game (`career_save_v1.json`) restores Player/League data but resets the `GameDate` to Week 1. **Next Step:** Parse/Serialize `currentDate` in `GameStorage`.
-3.  **Transfer Market:** `TransferScreen` is a UI placeholder. No logic exists to list players or process transfers.
-4.  **Business logic:** You can view businesses, but the "Buy" button is mocked (does not deduct money or add to portfolio).
+1.  **Transfer Market:** `TransferScreen` is a UI placeholder. No logic exists to list players or process transfers.
+2.  **Business logic:** You can view businesses, but the "Buy" button is mocked (does not deduct money or add to portfolio).
+3.  **Advanced Match Logic:** The visualizer is decorative (random movement); it doesn't represent actual tactical simulation yet.
 
 ### ðŸŸ  UI/UX Improvements
 *   **Navigation:** The "Back" button behavior needs unification across all screens.
@@ -127,11 +133,11 @@ Players can invest in businesses (`BusinessDatabase`) to earn weekly passive inc
 *   **Investments:** Players can buy businesses (Lemonade Stand to Diamond Mine) for passive income.
 
 ## 4. Current State & Next Steps
-*   **Current:** The core loop (Simulate -> Match -> Event) works. UI allows navigation and basic interaction.
-*   **Next Steps (Jules Session 2):**
-    *   **Save/Load System:** Persist the `World` object using Room or JSON serialization.
-    *   **Match Visualizer:** A 2D view of the match events (dots on a pitch).
-    *   **Training Minigames:** Interactive ways to boost specific skills.
+*   **Current:** Core loop (Simulate -> Match -> Event) works. Persistence and Match Visualizer implemented.
+*   **Next Steps (Session 3):**
+    *   **Transfer Market:** Implement logic for searching/buying players.
+    *   **Business Engine:** Connect the "Buy" button to economy logic.
+    *   **Sponsorships:** Add sponsor deals negotiation.
 
 ## 5. File Tree
 ```
@@ -182,6 +188,9 @@ com.championstar.soccer
     ├── screens
     │   ├── DashboardScreen.kt
     │   ├── LeagueScreen.kt
+    │   ├── MatchScreen.kt
+    │   ├── TrainingScreen.kt
+    │   ├── RunnerGameScreen.kt
     │   └── ShopScreen.kt
     └── theme
         ├── Color.kt
