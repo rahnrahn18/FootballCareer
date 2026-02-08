@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,11 +22,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.championstar.soccer.domain.models.Player
-import com.championstar.soccer.simulation.engine.EventChoice
 import com.championstar.soccer.simulation.engine.GameTurnEvent
 import com.championstar.soccer.ui.components.GloryCurrency
-import com.championstar.soccer.ui.components.PitchBackground
-import com.championstar.soccer.ui.components.PlayerAvatar
+import com.championstar.soccer.ui.components.PlayerAssetImage
 import com.championstar.soccer.ui.components.StarCurrency
 
 @Composable
@@ -37,83 +36,92 @@ fun DashboardScreen(
     onEventCompleted: () -> Unit,
     onNavigateToLeague: () -> Unit,
     onNavigateToShop: () -> Unit,
-    onNavigateToBusiness: () -> Unit, // Added
+    onNavigateToBusiness: () -> Unit,
     onSaveAndExit: () -> Unit
 ) {
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
 
-    PitchBackground {
+    // Use a solid color or very subtle gradient for minimalism
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF121212))
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(8.dp) // Minimal padding
         ) {
-            // --- LEFT PANEL: Player Profile (30%) ---
+            // --- LEFT PANEL: Player Compact Profile (25%) ---
             Column(
                 modifier = Modifier
-                    .weight(0.3f)
+                    .weight(0.25f)
                     .fillMaxHeight()
-                    .padding(end = 16.dp)
+                    .padding(end = 8.dp)
             ) {
-                PlayerProfileCard(player)
+                CompactPlayerProfile(player)
             }
 
-            // --- RIGHT PANEL: Hub (70%) ---
+            // --- RIGHT PANEL: Action Hub (75%) ---
             Column(
                 modifier = Modifier
-                    .weight(0.7f)
+                    .weight(0.75f)
                     .fillMaxHeight()
             ) {
-                // Top Bar: Resources & Date
-                DashboardTopBar(player, currentDate)
+                // Top Bar: Dense Resources & Date
+                CompactTopBar(player, currentDate)
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Center: Main Action Area (Event or Navigation)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    if (currentEvent != null) {
-                        EventCard(
-                            event = currentEvent,
-                            onEventDismissed = onEventCompleted,
-                            onChoiceMade = { msg -> feedbackMessage = msg },
-                            player = player
-                        )
-                    } else {
-                        // Default Hub View: Continue Button + Navigation
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            // "Daily News / Event Box" (Replaces simple button)
-                            DailyNewsBox(onAdvanceTime)
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Navigation Grid
-                            NavigationGrid(
-                                onNavigateToLeague = onNavigateToLeague,
-                                onNavigateToShop = onNavigateToShop,
-                                onNavigateToBusiness = onNavigateToBusiness, // Added
-                                onSaveAndExit = onSaveAndExit
+                // Center: Split View (Event Box on Left, Grid on Right)
+                Row(modifier = Modifier.weight(1f)) {
+                    // Event/News Box (40%)
+                    Box(
+                        modifier = Modifier
+                            .weight(0.4f)
+                            .fillMaxHeight()
+                            .padding(end = 8.dp)
+                    ) {
+                        if (currentEvent != null) {
+                            EventCard(
+                                event = currentEvent,
+                                onEventDismissed = onEventCompleted,
+                                onChoiceMade = { msg -> feedbackMessage = msg },
+                                player = player
                             )
+                        } else {
+                            DailyNewsBox(onAdvanceTime)
                         }
+                    }
+
+                    // Navigation Grid (60%)
+                    Box(
+                        modifier = Modifier
+                            .weight(0.6f)
+                            .fillMaxHeight()
+                    ) {
+                        CompactNavigationGrid(
+                            onNavigateToLeague,
+                            onNavigateToShop,
+                            onNavigateToBusiness,
+                            onSaveAndExit
+                        )
                     }
                 }
             }
         }
 
-        // Feedback Dialog
+        // Feedback Dialog (Minimal)
         if (feedbackMessage != null) {
             AlertDialog(
                 onDismissRequest = {
                     feedbackMessage = null
                     onEventCompleted()
                 },
-                title = { Text("Result") },
-                text = { Text(feedbackMessage!!) },
+                title = { Text("Result", fontSize = 16.sp) },
+                text = { Text(feedbackMessage!!, fontSize = 14.sp) },
                 confirmButton = {
-                    Button(onClick = {
+                    TextButton(onClick = {
                         feedbackMessage = null
                         onEventCompleted()
                     }) { Text("OK") }
@@ -127,99 +135,60 @@ fun DashboardScreen(
 }
 
 @Composable
-fun DailyNewsBox(onClick: () -> Unit) {
+fun CompactPlayerProfile(player: Player) {
     Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E3B4E)), // Dark Blue-Grey
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = "NEXT DAY / EVENT",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFFD700)
-                )
-                Text(
-                    text = "Tap to advance time and see what happens...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.LightGray
-                )
-            }
-            Icon(
-                imageVector = Icons.Filled.CalendarToday,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun PlayerProfileCard(player: Player) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E).copy(alpha = 0.9f)),
-        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
+            // Avatar (Smaller, Circle)
             Box(
                 modifier = Modifier
-                    .weight(0.5f)
-                    .fillMaxWidth()
+                    .size(80.dp) // Reduced size
+                    .background(Color.Gray, CircleShape)
             ) {
-                PlayerAvatar(modifier = Modifier.fillMaxSize())
+                 PlayerAssetImage(modifier = Modifier.fillMaxSize()) // Using Coil
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Info
+            // Info (Dense)
             Text(
                 text = player.name,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                maxLines = 1
             )
             Text(
-                text = "${player.position} | Age ${player.age}",
+                text = "${player.position} | ${player.age}yo",
                 color = Color.LightGray,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.labelMedium
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Key Stats Grid
+            // Stats Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatBadge("OVR", String.format("%.0f", player.overallRating), Color(0xFFFFD700))
-                StatBadge("FORM", String.format("%.0f", player.form), if(player.form > 70) Color.Green else Color.White)
+                CompactStat("OVR", String.format("%.0f", player.overallRating), Color(0xFFFFD700))
+                CompactStat("FORM", String.format("%.0f", player.form), if(player.form > 70) Color.Green else Color.White)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Stamina Bar
-            Text("Stamina", color = Color.Gray, fontSize = 12.sp)
+            // Stamina (Thin)
             LinearProgressIndicator(
                 progress = { (player.stamina / 100f).toFloat() },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
+                modifier = Modifier.fillMaxWidth().height(4.dp),
                 color = if(player.stamina < 30) Color.Red else Color.Cyan,
                 trackColor = Color.DarkGray,
             )
@@ -228,31 +197,32 @@ fun PlayerProfileCard(player: Player) {
 }
 
 @Composable
-fun StatBadge(label: String, value: String, color: Color) {
+fun CompactStat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = color, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(value, style = MaterialTheme.typography.titleSmall, color = color, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontSize = 10.sp)
     }
 }
 
 @Composable
-fun DashboardTopBar(player: Player, currentDate: String) {
+fun CompactTopBar(player: Player, currentDate: String) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.6f)),
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF212121)),
+        shape = RoundedCornerShape(4.dp),
+        modifier = Modifier.fillMaxWidth().height(40.dp) // Fixed height
     ) {
         Row(
             modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
+                .padding(horizontal = 8.dp)
+                .fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(currentDate, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(currentDate, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StarCurrency(player.stars)
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 GloryCurrency(player.glory)
             }
         }
@@ -260,7 +230,7 @@ fun DashboardTopBar(player: Player, currentDate: String) {
 }
 
 @Composable
-fun NavigationGrid(
+fun CompactNavigationGrid(
     onNavigateToLeague: () -> Unit,
     onNavigateToShop: () -> Unit,
     onNavigateToBusiness: () -> Unit,
@@ -269,20 +239,20 @@ fun NavigationGrid(
     val items = listOf(
         NavItem("League", Icons.Filled.EmojiEvents, Color(0xFF1565C0), onNavigateToLeague),
         NavItem("Shop", Icons.Filled.ShoppingCart, Color(0xFF2E7D32), onNavigateToShop),
-        NavItem("Squad", Icons.Filled.Person, Color(0xFF6A1B9A), {}), // Placeholder
-        NavItem("Business", Icons.Filled.Business, Color(0xFF00ACC1), onNavigateToBusiness), // NEW
-        NavItem("Transfers", Icons.Filled.CompareArrows, Color(0xFFEF6C00), {}), // Placeholder
+        NavItem("Squad", Icons.Filled.Person, Color(0xFF6A1B9A), {}),
+        NavItem("Biz", Icons.Filled.Business, Color(0xFF00ACC1), onNavigateToBusiness),
+        NavItem("Transfer", Icons.Filled.CompareArrows, Color(0xFFEF6C00), {}),
         NavItem("Exit", Icons.Filled.ExitToApp, Color(0xFFC62828), onSaveAndExit)
     )
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3), // 3 columns
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
         items(items) { item ->
-            NavCard(item)
+            CompactNavCard(item)
         }
     }
 }
@@ -290,21 +260,55 @@ fun NavigationGrid(
 data class NavItem(val label: String, val icon: ImageVector, val color: Color, val onClick: () -> Unit)
 
 @Composable
-fun NavCard(item: NavItem) {
+fun CompactNavCard(item: NavItem) {
     Card(
         onClick = item.onClick,
-        colors = CardDefaults.cardColors(containerColor = item.color.copy(alpha = 0.9f)),
-        modifier = Modifier
-            .height(100.dp) // Fixed height for grid
+        colors = CardDefaults.cardColors(containerColor = item.color.copy(alpha = 0.8f)),
+        shape = RoundedCornerShape(4.dp),
+        modifier = Modifier.aspectRatio(1.5f) // Fixed aspect ratio
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
+            Icon(item.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Text(item.label, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+fun DailyNewsBox(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E3B4E)),
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CalendarToday,
+                contentDescription = null,
+                tint = Color(0xFFFFD700),
+                modifier = Modifier.size(32.dp)
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(item.label, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                text = "NEXT DAY",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Text(
+                text = "Tap to advance",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.LightGray
+            )
         }
     }
 }
