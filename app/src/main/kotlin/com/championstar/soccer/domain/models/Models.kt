@@ -2,6 +2,33 @@ package com.championstar.soccer.domain.models
 
 import com.championstar.soccer.data.static.TraitDatabase
 
+// --- Currency Enums ---
+enum class Currency {
+    STAR,    // Earned from Achievements
+    GLORY    // Premium Currency (replacing "Golden")
+}
+
+// --- Achievement System ---
+data class Achievement(
+    val id: String,
+    val title: String,
+    val description: String,
+    val rewardStars: Int,
+    var isUnlocked: Boolean = false
+)
+
+// --- Shop System ---
+data class ShopItem(
+    val id: String,
+    val name: String,
+    val description: String,
+    val cost: Int,
+    val currency: Currency,
+    val isConsumable: Boolean = true, // Can be bought multiple times?
+    val effect: (Player) -> String // Returns a message
+)
+
+// --- Player (Updated) ---
 data class Player(
     val id: String,
     val name: String,
@@ -24,7 +51,13 @@ data class Player(
     var agent: Agent? = null,
     var marketValue: Long = 0,
     var isListedForLoan: Boolean = false,
-    var isListedForTransfer: Boolean = false
+    var isListedForTransfer: Boolean = false,
+
+    // NEW: Currencies & Progression
+    var stars: Int = 0,
+    var glory: Int = 0,
+    val unlockedAchievements: MutableList<String> = mutableListOf(), // IDs
+    var retirementAge: Int = 35 // Default 35, can extend to 40
 )
 
 data class Contract(

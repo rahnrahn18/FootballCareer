@@ -16,17 +16,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.championstar.soccer.simulation.engine.RankingEngine
-import com.championstar.soccer.simulation.engine.SquadEngine
+import com.championstar.soccer.data.static.ShopDatabase
 import com.championstar.soccer.simulation.engine.WorldGenerator
 import com.championstar.soccer.simulation.engine.CareerEngine
-import com.championstar.soccer.simulation.engine.AgentEngine
 import com.championstar.soccer.simulation.engine.TimeEngine
-import com.championstar.soccer.simulation.engine.EventEngine
-import com.championstar.soccer.domain.models.Contract
+import com.championstar.soccer.simulation.engine.ShopEngine
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
-import com.championstar.soccer.domain.models.Team
+import com.championstar.soccer.domain.models.Currency
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,12 +35,16 @@ class MainActivity : ComponentActivity() {
         // 2. Start Career (Zero to Hero)
         val myPlayer = CareerEngine.startCareer("User Hero", "ST", "Europe")
 
-        // 3. Initial Trial
+        // Grant free currency for demo
+        myPlayer.stars = 50
+        myPlayer.glory = 20
+
+        // 3. Join Team
         val trialOffers = CareerEngine.generateTrialOffers(myPlayer, leagues)
         if (trialOffers.isNotEmpty()) {
             val (team, contract) = trialOffers.first()
-            myPlayer.contract = contract // Auto-accept for demo
-            team.players.add(myPlayer) // Join team
+            myPlayer.contract = contract
+            team.players.add(myPlayer)
         }
 
         setContent {
@@ -54,39 +55,51 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GameLoopView(leagues: List<League>, player: Player) {
-    val gameLog = remember { mutableStateOf("Game Started!\nSigned with ${player.contract?.salary?.let { "$" + it } ?: "No one"} / wk.") }
+    val gameLog = remember { mutableStateOf("Welcome! You have joined a club.") }
     val currentWeek = remember { mutableStateOf(TimeEngine.currentDate.toString()) }
+    val playerStats = remember { mutableStateOf("") }
+
+    fun updateStats() {
+        playerStats.value = "OVR ${String.format("%.1f", player.overallRating)} | Sta ${String.format("%.1f", player.stamina)} | Age ${player.age}/${player.retirementAge}\n" +
+                            "⭐ Stars: ${player.stars} | 🏆 Glory: ${player.glory}"
+    }
+    updateStats()
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Week: ${currentWeek.value}")
+        Text("Date: ${currentWeek.value}")
         Text("Player: ${player.name} (${player.position})")
-        Text("Stats: OVR ${String.format("%.1f", player.overallRating)} | Form ${String.format("%.1f", player.form)} | Sta ${String.format("%.1f", player.stamina)}")
-        Text("Goals: ${player.goals} | Apps: ${player.appearances}")
+        Text(playerStats.value)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = {
-            // --- THE GAME LOOP ---
-            val sb = StringBuilder()
-
-            // 1. Process Week (Match, Training, Finance)
-            sb.append(TimeEngine.processWeek(player, leagues))
-
-            // 2. Random Event
-            val event = EventEngine.generateWeeklyEvent(player)
-            if (event != null) {
-                sb.append("❗ EVENT: ${event.title}\n${event.description}\n")
-                // Auto-pick first choice for demo
-                val choice = event.choices.first()
-                sb.append("   > Chose: ${choice.text}\n   > Result: ${choice.consequence(player)}\n")
-            }
-
-            // 3. Update UI State
-            gameLog.value = sb.toString()
+            // --- TIME SKIP ---
+            val log = TimeEngine.jumpToNextEvent(player, leagues)
+            gameLog.value = log
             currentWeek.value = TimeEngine.currentDate.toString()
-
+            updateStats()
         }) {
-            Text("Advance Week (Play/Train)")
+            Text("Simulate to Next Event")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = {
+            // --- SHOP DEMO ---
+            val result = ShopEngine.buyItem(player, "S_01") // Buy Energy Drink
+            gameLog.value = "SHOP: $result"
+            updateStats()
+        }) {
+            Text("Buy Energy Drink (1 Star)")
+        }
+
+        Button(onClick = {
+             // --- PREMIUM SHOP DEMO ---
+            val result = ShopEngine.buyItem(player, "G_01") // Reset Age
+            gameLog.value = "PREMIUM SHOP: $result"
+            updateStats()
+        }) {
+            Text("Reset Age (50 Glory) - Fail Check")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
