@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.championstar.soccer.ui.theme.PitchGreen
 
 /**
  * A reusable background simulating a football pitch or stadium ambiance.

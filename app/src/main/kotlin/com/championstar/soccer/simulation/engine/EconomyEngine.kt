@@ -26,12 +26,12 @@ object EconomyEngine {
         activeBusinesses.forEach { (businessId, quantity) ->
             val business = BusinessDatabase.getBusinessById(businessId)
             if (business != null) {
-                // ROI is annual, convert to weekly
-                val weeklyRoi = business.roi / 52.0
-                val investment = business.cost * quantity
+                // Fixed income based on weeklyIncome property
+                val weeklyIncome = business.weeklyIncome * quantity
 
-                val returnAmount = EconomyMath.calculateBusinessReturn(investment, weeklyRoi, business.risk / 52.0)
-                businessIncome += returnAmount
+                // Add simple risk factor logic (chance to lose money?)
+                // For now, just add income
+                businessIncome += weeklyIncome
             }
         }
         team.budget += businessIncome

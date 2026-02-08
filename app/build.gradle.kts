@@ -63,13 +63,12 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata") // Added for LiveData observation
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
-    // Room
-    val room_version = "2.6.1"
-    implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    ksp("androidx.room:room-compiler:$room_version")
+    // Room Removed - Replaced with Gson for File Storage
+    // implementation("androidx.room:room-runtime:2.6.1")
+    // implementation("androidx.room:room-ktx:2.6.1")
+    // ksp("androidx.room:room-compiler:2.6.1")
 
-    // Gson
+    // Gson (JSON Serialization)
     implementation("com.google.code.gson:gson:2.11.0")
 
     // Coil (Image Loading)

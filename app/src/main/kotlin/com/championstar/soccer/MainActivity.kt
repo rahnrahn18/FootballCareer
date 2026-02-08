@@ -1,14 +1,20 @@
 package com.championstar.soccer
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -16,136 +22,142 @@ import com.championstar.soccer.data.local.GameStorage
 import com.championstar.soccer.data.static.ShopDatabase
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
+import com.championstar.soccer.domain.models.Team
 import com.championstar.soccer.simulation.engine.*
 import com.championstar.soccer.ui.screens.*
 import com.championstar.soccer.ui.theme.ChampionstarTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
-        // World generation is heavy, ideally keep it in memory or load lazily.
-        // For this architecture, we generate it once per app session or load from disk.
-        var worldLeagues = WorldGenerator.generateWorld()
+        // Removed World Generation from Main Thread here.
+        // It will be handled in the UI via Coroutines.
 
         setContent {
             ChampionstarTheme {
-                RootNavigation(
-                    initialLeagues = worldLeagues,
-                    onWorldRegenerated = { worldLeagues = it } // Callback if New Game regenerates
-                )
+                RootNavigation()
             }
         }
     }
 }
 
 @Composable
-fun RootNavigation(
-    initialLeagues: List<League>,
-    onWorldRegenerated: (List<League>) -> Unit
-) {
+fun RootNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // Global Game State (Lifted up)
     var player by remember { mutableStateOf<Player?>(null) }
-    var leagues by remember { mutableStateOf(initialLeagues) }
+    var leagues by remember { mutableStateOf<List<League>>(emptyList()) }
     var hasSave by remember { mutableStateOf(GameStorage.hasSaveGame(context)) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = Color(0xFFFFD700))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Simulating World... Please Wait", color = Color.White)
+            }
+        }
+        return
+    }
 
     NavHost(navController = navController, startDestination = "main_menu") {
-
-        // 1. MAIN MENU
         composable("main_menu") {
             MainMenuScreen(
                 hasSaveGame = hasSave,
                 onNewGame = {
-                    // Clear old data if any
-                    GameStorage.deleteSave(context)
-                    // Regenerate world to ensure fresh start
-                    val newWorld = WorldGenerator.generateWorld()
-                    onWorldRegenerated(newWorld)
-                    leagues = newWorld
-                    // Navigate to Creator
-                    navController.navigate("character_creation")
+                    scope.launch {
+                        isLoading = true
+                        GameStorage.deleteSave(context)
+                        // Generate World on IO Thread
+                        val newWorld = withContext(Dispatchers.IO) {
+                            WorldGenerator.generateWorld()
+                        }
+                        leagues = newWorld
+                        isLoading = false
+                        navController.navigate("character_creation")
+                    }
                 },
                 onLoadGame = {
-                    val savedState = GameStorage.loadGame(context)
-                    if (savedState != null) {
-                        player = savedState.player
-                        // Ideally we load the world state too.
-                        // For prototype simplicity, we use the static generated world
-                        // but injecting the saved player back into their team is complex without full serialization.
-                        // We will assume the `GameStorage` saves EVERYTHING (Player + Leagues).
-                        // Since `GameStorage` DOES save leagues, we use them!
-                        leagues = savedState.leagues
-                        // Note: TimeEngine needs to be updated with saved date string
-                        // TimeEngine.currentDate = ... (Parsing logic needed, skipping for prototype safety)
-
-                        navController.navigate("main_game")
+                    scope.launch {
+                        isLoading = true
+                        // Load Game on IO Thread
+                        val savedState = withContext(Dispatchers.IO) {
+                            GameStorage.loadGame(context)
+                        }
+                        if (savedState != null) {
+                            player = savedState.player
+                            leagues = savedState.leagues
+                            isLoading = false
+                            navController.navigate("main_game")
+                        } else {
+                            isLoading = false
+                            // Handle load error
+                        }
                     }
                 }
             )
         }
-
-        // 2. CHARACTER CREATION
         composable("character_creation") {
             CharacterCreationScreen(
                 onCharacterCreated = { newPlayer ->
-                    player = newPlayer
+                    scope.launch {
+                        isLoading = true
+                        player = newPlayer
 
-                    // Logic to find a team for the new player (Trial offer logic)
-                    val trialOffers = CareerEngine.generateTrialOffers(newPlayer, leagues)
-                    if (trialOffers.isNotEmpty()) {
-                        val (team, contract) = trialOffers.first()
-                        newPlayer.contract = contract
-                        // Find the team instance in the `leagues` list and add player
-                        val targetTeam = leagues.flatMap { it.teams }.find { it.id == team.id }
-                        targetTeam?.players?.add(newPlayer)
-                    } else {
-                        // Fallback: Force join a Tier 4 team
-                        val fallback = leagues.last().teams.first()
-                        fallback.players.add(newPlayer)
-                    }
+                        // Process trial logic
+                        val trialOffers = CareerEngine.generateTrialOffers(newPlayer, leagues)
+                        if (trialOffers.isNotEmpty()) {
+                            val (team, contract) = trialOffers.first()
+                            newPlayer.contract = contract
+                            val targetTeam = leagues.flatMap { it.teams }.find { it.id == team.id }
+                            targetTeam?.players?.add(newPlayer)
+                        } else {
+                            val fallback = leagues.last().teams.first()
+                            fallback.players.add(newPlayer)
+                        }
 
-                    // Save immediately
-                    GameStorage.saveGame(context, newPlayer, leagues)
-                    hasSave = true
+                        // Save on IO Thread
+                        withContext(Dispatchers.IO) {
+                            GameStorage.saveGame(context, newPlayer, leagues)
+                        }
+                        hasSave = true
+                        isLoading = false
 
-                    navController.navigate("main_game") {
-                        popUpTo("main_menu") { inclusive = true }
+                        navController.navigate("main_game") { popUpTo("main_menu") { inclusive = true } }
                     }
                 },
                 onBack = { navController.popBackStack() }
             )
         }
-
-        // 3. MAIN GAME LOOP
         composable("main_game") {
             if (player != null) {
                 MainGameScreen(
                     player = player!!,
                     leagues = leagues,
                     onSave = {
-                        GameStorage.saveGame(context, player!!, leagues)
-                    },
-                    onExit = {
-                        navController.navigate("main_menu") {
-                            popUpTo("main_game") { inclusive = true }
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                GameStorage.saveGame(context, player!!, leagues)
+                            }
                         }
-                    }
+                    },
+                    onExit = { navController.navigate("main_menu") { popUpTo("main_game") { inclusive = true } } }
                 )
             } else {
-                // Error state, go back
                 LaunchedEffect(Unit) { navController.navigate("main_menu") }
             }
         }
     }
 }
 
-/**
- * Wrapper for the in-game UI (Dashboard/League/Shop navigation).
- * Replaces the old `MainApp` composable.
- */
 @Composable
 fun MainGameScreen(
     player: Player,
@@ -155,75 +167,89 @@ fun MainGameScreen(
 ) {
     val navController = rememberNavController()
     var currentDate by remember { mutableStateOf(TimeEngine.currentDate.toString()) }
-    var triggerRecomposition by remember { mutableStateOf(0) }
+    var currentEvent by remember { mutableStateOf<GameTurnEvent?>(null) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF1E1E1E),
-                contentColor = Color.White
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("dashboard") },
-                    icon = { Text("🏠") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("league") },
-                    icon = { Text("🏆") },
-                    label = { Text("League") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("shop") },
-                    icon = { Text("🛒") },
-                    label = { Text("Shop") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {
-                        onSave()
-                        onExit()
-                    },
-                    icon = { Text("🚪") },
-                    label = { Text("Exit") }
-                )
-            }
+    NavHost(
+        navController = navController,
+        startDestination = "dashboard",
+        modifier = Modifier.fillMaxSize()
+    ) {
+        composable("dashboard") {
+            DashboardScreen(
+                player = player,
+                currentDate = currentDate,
+                currentEvent = currentEvent,
+                onAdvanceTime = {
+                    val event = TimeEngine.advanceTime(player, leagues)
+                    currentEvent = event
+                    currentDate = TimeEngine.currentDate.toString()
+                    onSave()
+                },
+                onEventCompleted = { currentEvent = null },
+                onNavigateToLeague = { navController.navigate("league") },
+                onNavigateToShop = { navController.navigate("shop") },
+                onNavigateToBusiness = { navController.navigate("business") },
+                onSaveAndExit = { onSave(); onExit() }
+            )
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "dashboard",
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable("dashboard") {
-                DashboardScreen(
-                    player = player,
-                    currentDate = currentDate,
-                    onSimulate = {
-                        TimeEngine.jumpToNextEvent(player, leagues)
-                        currentDate = TimeEngine.currentDate.toString()
-                        triggerRecomposition++
-                        // Auto-save on week advance? Optional.
-                    }
-                )
-            }
-            composable("league") {
+        composable("league") {
+            FullscreenScreenWithBack(navController) {
                 val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
                 LeagueScreen(leagues, team?.leagueId)
             }
-            composable("shop") {
-                ShopScreen(
-                    player = player,
-                    items = ShopDatabase.items,
-                    onBuy = { itemId ->
-                        ShopEngine.buyItem(player, itemId)
-                        triggerRecomposition++
-                    }
-                )
+        }
+        composable("shop") {
+            FullscreenScreenWithBack(navController) {
+                ShopScreen(player, ShopDatabase.items, { ShopEngine.buyItem(player, it) })
             }
+        }
+        composable("business") {
+            FullscreenScreenWithBack(navController) {
+                BusinessScreen(player, { /* TODO logic */ })
+            }
+        }
+        composable("club") {
+            FullscreenScreenWithBack(navController) {
+                val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
+                ClubScreen(team)
+            }
+        }
+        composable("transfers") { FullscreenScreenWithBack(navController) { TransferScreen() } }
+        composable("sponsors") { FullscreenScreenWithBack(navController) { SponsorScreen() } }
+        composable("ranking") { FullscreenScreenWithBack(navController) { RankingScreen() } }
+        composable("achievements") { FullscreenScreenWithBack(navController) { AchievementScreen(player) } }
+        composable("match") {
+             val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
+             val opponent = leagues.flatMap { it.teams }.filter { it.id != team?.id }.randomOrNull()
+
+             if (team != null && opponent != null) {
+                FullscreenScreenWithBack(navController) {
+                    MatchScreen(
+                        player = player,
+                        team = team,
+                        opponent = opponent,
+                        onMatchEnd = { h, a ->
+                            navController.popBackStack()
+                        }
+                    )
+                }
+             } else {
+                 LaunchedEffect(Unit) { navController.popBackStack() }
+             }
+        }
+    }
+}
+
+@Composable
+fun FullscreenScreenWithBack(navController: androidx.navigation.NavController, content: @Composable () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        content()
+        FloatingActionButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Icon(Icons.Filled.ArrowBack, "Back")
         }
     }
 }
