@@ -1,14 +1,19 @@
 package com.championstar.soccer
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -23,6 +28,9 @@ import com.championstar.soccer.ui.theme.ChampionstarTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Step 2: Enforce Landscape Orientation
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
         // World generation is heavy, ideally keep it in memory or load lazily.
         // For this architecture, we generate it once per app session or load from disk.
@@ -155,74 +163,68 @@ fun MainGameScreen(
 ) {
     val navController = rememberNavController()
     var currentDate by remember { mutableStateOf(TimeEngine.currentDate.toString()) }
-    var triggerRecomposition by remember { mutableStateOf(0) }
+    var currentEvent by remember { mutableStateOf<GameTurnEvent?>(null) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF1E1E1E),
-                contentColor = Color.White
-            ) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("dashboard") },
-                    icon = { Text("🏠") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("league") },
-                    icon = { Text("🏆") },
-                    label = { Text("League") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("shop") },
-                    icon = { Text("🛒") },
-                    label = { Text("Shop") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {
-                        onSave()
-                        onExit()
-                    },
-                    icon = { Text("🚪") },
-                    label = { Text("Exit") }
-                )
-            }
+    NavHost(
+        navController = navController,
+        startDestination = "dashboard",
+        modifier = Modifier.fillMaxSize()
+    ) {
+        composable("dashboard") {
+            DashboardScreen(
+                player = player,
+                currentDate = currentDate,
+                currentEvent = currentEvent,
+                onAdvanceTime = {
+                    val event = TimeEngine.advanceTime(player, leagues)
+                    currentEvent = event
+                    currentDate = TimeEngine.currentDate.toString()
+                    onSave() // Auto-save on turn advance
+                },
+                onEventCompleted = {
+                    currentEvent = null // Dismiss event, ready for next turn
+                },
+                onNavigateToLeague = { navController.navigate("league") },
+                onNavigateToShop = { navController.navigate("shop") },
+                onSaveAndExit = {
+                    onSave()
+                    onExit()
+                }
+            )
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "dashboard",
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable("dashboard") {
-                DashboardScreen(
-                    player = player,
-                    currentDate = currentDate,
-                    onSimulate = {
-                        TimeEngine.jumpToNextEvent(player, leagues)
-                        currentDate = TimeEngine.currentDate.toString()
-                        triggerRecomposition++
-                        // Auto-save on week advance? Optional.
-                    }
-                )
-            }
-            composable("league") {
+        composable("league") {
+            Box(modifier = Modifier.fillMaxSize()) {
                 val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
                 LeagueScreen(leagues, team?.leagueId)
+
+                // Back Button Overlay
+                FloatingActionButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Filled.ArrowBack, "Back")
+                }
             }
-            composable("shop") {
+        }
+        composable("shop") {
+            Box(modifier = Modifier.fillMaxSize()) {
                 ShopScreen(
                     player = player,
                     items = ShopDatabase.items,
                     onBuy = { itemId ->
                         ShopEngine.buyItem(player, itemId)
-                        triggerRecomposition++
                     }
                 )
+
+                // Back Button Overlay
+                FloatingActionButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Filled.ArrowBack, "Back")
+                }
             }
         }
     }
