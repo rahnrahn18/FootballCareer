@@ -37,6 +37,7 @@ fun DashboardScreen(
     onEventCompleted: () -> Unit,
     onNavigateToLeague: () -> Unit,
     onNavigateToShop: () -> Unit,
+    onNavigateToBusiness: () -> Unit, // Added
     onSaveAndExit: () -> Unit
 ) {
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
@@ -84,24 +85,8 @@ fun DashboardScreen(
                     } else {
                         // Default Hub View: Continue Button + Navigation
                         Column(modifier = Modifier.fillMaxSize()) {
-                            // "Next Day" / Continue Button
-                            Button(
-                                onClick = onAdvanceTime,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF4CAF50)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    "CONTINUE / NEXT DAY",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
+                            // "Daily News / Event Box" (Replaces simple button)
+                            DailyNewsBox(onAdvanceTime)
 
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -109,6 +94,7 @@ fun DashboardScreen(
                             NavigationGrid(
                                 onNavigateToLeague = onNavigateToLeague,
                                 onNavigateToShop = onNavigateToShop,
+                                onNavigateToBusiness = onNavigateToBusiness, // Added
                                 onSaveAndExit = onSaveAndExit
                             )
                         }
@@ -135,6 +121,44 @@ fun DashboardScreen(
                 containerColor = Color(0xFF263238),
                 titleContentColor = Color(0xFFFFD700),
                 textContentColor = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun DailyNewsBox(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E3B4E)), // Dark Blue-Grey
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "NEXT DAY / EVENT",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFD700)
+                )
+                Text(
+                    text = "Tap to advance time and see what happens...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.LightGray
+                )
+            }
+            Icon(
+                imageVector = Icons.Filled.CalendarToday,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
             )
         }
     }
@@ -239,12 +263,14 @@ fun DashboardTopBar(player: Player, currentDate: String) {
 fun NavigationGrid(
     onNavigateToLeague: () -> Unit,
     onNavigateToShop: () -> Unit,
+    onNavigateToBusiness: () -> Unit,
     onSaveAndExit: () -> Unit
 ) {
     val items = listOf(
         NavItem("League", Icons.Filled.EmojiEvents, Color(0xFF1565C0), onNavigateToLeague),
         NavItem("Shop", Icons.Filled.ShoppingCart, Color(0xFF2E7D32), onNavigateToShop),
         NavItem("Squad", Icons.Filled.Person, Color(0xFF6A1B9A), {}), // Placeholder
+        NavItem("Business", Icons.Filled.Business, Color(0xFF00ACC1), onNavigateToBusiness), // NEW
         NavItem("Transfers", Icons.Filled.CompareArrows, Color(0xFFEF6C00), {}), // Placeholder
         NavItem("Exit", Icons.Filled.ExitToApp, Color(0xFFC62828), onSaveAndExit)
     )

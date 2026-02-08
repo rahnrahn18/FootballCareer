@@ -186,6 +186,7 @@ fun MainGameScreen(
                 },
                 onNavigateToLeague = { navController.navigate("league") },
                 onNavigateToShop = { navController.navigate("shop") },
+                onNavigateToBusiness = { navController.navigate("business") }, // NEW
                 onSaveAndExit = {
                     onSave()
                     onExit()
@@ -218,6 +219,25 @@ fun MainGameScreen(
                 )
 
                 // Back Button Overlay
+                FloatingActionButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Filled.ArrowBack, "Back")
+                }
+            }
+        }
+        composable("business") {
+            Box(modifier = Modifier.fillMaxSize()) {
+                BusinessScreen(
+                    player = player,
+                    onBuy = { businessId ->
+                        // Placeholder Logic for Business Buying
+                        // Ideally call BusinessEngine.buyBusiness(player, businessId)
+                    }
+                )
+
                 FloatingActionButton(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
