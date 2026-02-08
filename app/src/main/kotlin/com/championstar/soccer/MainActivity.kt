@@ -3,43 +3,41 @@ package com.championstar.soccer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.championstar.soccer.data.static.ShopDatabase
-import com.championstar.soccer.simulation.engine.WorldGenerator
-import com.championstar.soccer.simulation.engine.CareerEngine
-import com.championstar.soccer.simulation.engine.TimeEngine
-import com.championstar.soccer.simulation.engine.ShopEngine
+import com.championstar.soccer.domain.models.Contract
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
-import com.championstar.soccer.domain.models.Currency
+import com.championstar.soccer.simulation.engine.CareerEngine
+import com.championstar.soccer.simulation.engine.ShopEngine
+import com.championstar.soccer.simulation.engine.TimeEngine
+import com.championstar.soccer.simulation.engine.WorldGenerator
+import com.championstar.soccer.ui.screens.DashboardScreen
+import com.championstar.soccer.ui.screens.LeagueScreen
+import com.championstar.soccer.ui.screens.ShopScreen
+import com.championstar.soccer.ui.theme.ChampionstarTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Generate World
+        // 1. Initialize World
+        // Note: Running on main thread for demo prototype. In production, use ViewModel/Coroutines.
         val leagues = WorldGenerator.generateWorld()
 
-        // 2. Start Career (Zero to Hero)
+        // 2. Start Career
         val myPlayer = CareerEngine.startCareer("User Hero", "ST", "Europe")
-
-        // Grant free currency for demo
         myPlayer.stars = 50
         myPlayer.glory = 20
 
-        // 3. Join Team
+        // 3. Initial Team Join
         val trialOffers = CareerEngine.generateTrialOffers(myPlayer, leagues)
         if (trialOffers.isNotEmpty()) {
             val (team, contract) = trialOffers.first()
@@ -48,63 +46,88 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            GameLoopView(leagues, myPlayer)
+            ChampionstarTheme {
+                MainApp(leagues, myPlayer)
+            }
         }
     }
 }
 
 @Composable
-fun GameLoopView(leagues: List<League>, player: Player) {
-    val gameLog = remember { mutableStateOf("Welcome! You have joined a club.") }
-    val currentWeek = remember { mutableStateOf(TimeEngine.currentDate.toString()) }
-    val playerStats = remember { mutableStateOf("") }
+fun MainApp(leagues: List<League>, player: Player) {
+    val navController = rememberNavController()
 
-    fun updateStats() {
-        playerStats.value = "OVR ${String.format("%.1f", player.overallRating)} | Sta ${String.format("%.1f", player.stamina)} | Age ${player.age}/${player.retirementAge}\n" +
-                            "⭐ Stars: ${player.stars} | 🏆 Glory: ${player.glory}"
-    }
-    updateStats()
+    // State holders
+    var currentDate by remember { mutableStateOf(TimeEngine.currentDate.toString()) }
+    var triggerRecomposition by remember { mutableStateOf(0) } // Forces refresh on object mutation
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("Date: ${currentWeek.value}")
-        Text("Player: ${player.name} (${player.position})")
-        Text(playerStats.value)
+    // Dummy state usage to force recomposition when trigger changes
+    val refresh = triggerRecomposition
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = {
-            // --- TIME SKIP ---
-            val log = TimeEngine.jumpToNextEvent(player, leagues)
-            gameLog.value = log
-            currentWeek.value = TimeEngine.currentDate.toString()
-            updateStats()
-        }) {
-            Text("Simulate to Next Event")
+    Scaffold(
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color(0xFF1E1E1E),
+                contentColor = Color.White
+            ) {
+                NavigationBarItem(
+                    selected = false, // Simplified
+                    onClick = { navController.navigate("dashboard") },
+                    icon = { Text("🏠") },
+                    label = { Text("Home") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("league") },
+                    icon = { Text("🏆") },
+                    label = { Text("League") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { navController.navigate("shop") },
+                    icon = { Text("🛒") },
+                    label = { Text("Shop") }
+                )
+            }
         }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "dashboard",
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable("dashboard") {
+                DashboardScreen(
+                    player = player,
+                    currentDate = currentDate,
+                    onSimulate = {
+                        // Core Logic Call
+                        TimeEngine.jumpToNextEvent(player, leagues)
+                        // Update UI
+                        currentDate = TimeEngine.currentDate.toString()
+                        triggerRecomposition++
+                    }
+                )
+            }
+            composable("league") {
+                // Find player's league
+                val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
+                val currentLeague = if (team != null) leagues.find { it.id == team.leagueId } else leagues.first()
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(onClick = {
-            // --- SHOP DEMO ---
-            val result = ShopEngine.buyItem(player, "S_01") // Buy Energy Drink
-            gameLog.value = "SHOP: $result"
-            updateStats()
-        }) {
-            Text("Buy Energy Drink (1 Star)")
+                // Pass single league object or ID. Screen takes list + ID.
+                LeagueScreen(leagues, currentLeague?.id)
+            }
+            composable("shop") {
+                ShopScreen(
+                    player = player,
+                    items = ShopDatabase.items,
+                    onBuy = { itemId ->
+                        val result = ShopEngine.buyItem(player, itemId)
+                        // Trigger update
+                        triggerRecomposition++
+                    }
+                )
+            }
         }
-
-        Button(onClick = {
-             // --- PREMIUM SHOP DEMO ---
-            val result = ShopEngine.buyItem(player, "G_01") // Reset Age
-            gameLog.value = "PREMIUM SHOP: $result"
-            updateStats()
-        }) {
-            Text("Reset Age (50 Glory) - Fail Check")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("--- Log ---")
-        Text(gameLog.value)
     }
 }
