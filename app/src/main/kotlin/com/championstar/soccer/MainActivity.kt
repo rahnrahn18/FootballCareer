@@ -189,8 +189,16 @@ fun MainGameScreen(
                 onNavigateToLeague = { navController.navigate("league") },
                 onNavigateToShop = { navController.navigate("shop") },
                 onNavigateToBusiness = { navController.navigate("business") },
+                onNavigateToTraining = { navController.navigate("training") },
                 onSaveAndExit = { onSave(); onExit() }
             )
+        }
+        composable("training") {
+            FullscreenScreenWithBack(navController) {
+                TrainingScreen(player) { success ->
+                    navController.popBackStack()
+                }
+            }
         }
         composable("league") {
             FullscreenScreenWithBack(navController) {
