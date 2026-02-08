@@ -48,6 +48,7 @@ object MatchEngine {
         // Generate events minute by minute
         for (minute in 1..MATCH_MINUTES) {
             // Check for goal
+            // Chance per minute distributed across the match
             if (homeScore < projectedHomeGoals && GameMath.chance(1.0 / (MATCH_MINUTES / projectedHomeGoals.coerceAtLeast(1).toDouble()))) {
                 homeScore++
                 val scorer = selectScorer(homeTeam)
@@ -67,13 +68,23 @@ object MatchEngine {
                 if (GameMath.chance(0.05)) { // 5% chance of noteworthy event per minute
                     val team = if (GameMath.chance(0.5)) homeTeam else awayTeam
                     val player = team.players.randomOrNull() ?: continue
-                    val eventType = EventDatabase.EventType.entries.filter { it != EventDatabase.EventType.SHOT && it != EventDatabase.EventType.CARD }.random()
+
+                    val possibleTypes = EventDatabase.EventType.entries.filter { it != EventDatabase.EventType.SHOT && it != EventDatabase.EventType.CARD }
+                    if (possibleTypes.isEmpty()) continue
+
+                    val eventType = possibleTypes.random()
                     val zone = EventDatabase.Zone.entries.random()
                     val outcome = if (GameMath.chance(0.7)) EventDatabase.Outcome.SUCCESS else EventDatabase.Outcome.FAILURE
 
                     var text = EventDatabase.getEvent(zone, eventType, outcome)
                     text = text.replace("{player}", player.name)
-                    text = text.replace("{receiver}", team.players.filter { it != player }.randomOrNull()?.name ?: "teammate")
+
+                    val otherPlayers = team.players.filter { it != player }
+                    if (otherPlayers.isNotEmpty()) {
+                         text = text.replace("{receiver}", otherPlayers.random().name)
+                    } else {
+                         text = text.replace("{receiver}", "teammate")
+                    }
 
                     events.add("$minute': $text")
                 }
@@ -106,5 +117,20 @@ object MatchEngine {
         }
 
         return Probability.weightedRandom(team.players, weights) ?: team.players.random()
+    }
+
+    /**
+     * Simulates a detailed match involving the User Player.
+     * Higher detail than general simulation.
+     */
+    fun playUserMatch(player: Player, team: Team, opponent: Team): MatchResult {
+        // Just use general logic for now, but ensure player is involved
+        // Could force player events here
+        val result = simulateMatch(team, opponent)
+
+        // Post-process to ensure user gets mentioned if they played well
+        // Logic handled in TimeEngine for now
+
+        return result
     }
 }
