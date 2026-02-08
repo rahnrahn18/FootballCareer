@@ -11,8 +11,12 @@ import androidx.compose.runtime.Composable
 import com.championstar.soccer.simulation.engine.RankingEngine
 import com.championstar.soccer.simulation.engine.SquadEngine
 import com.championstar.soccer.simulation.engine.WorldGenerator
+import com.championstar.soccer.simulation.engine.CareerEngine
+import com.championstar.soccer.simulation.engine.AgentEngine
+import com.championstar.soccer.domain.models.Contract
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
+import com.championstar.soccer.domain.models.Team
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,33 +24,55 @@ class MainActivity : ComponentActivity() {
 
         // Generate World (Simulation Check)
         val leagues = WorldGenerator.generateWorld()
-        val topPlayers = RankingEngine.getTop100Players(leagues)
 
-        // Squad Check
-        val firstTeam = leagues.first().teams.first()
-        val squad = SquadEngine.selectMatchSquad(firstTeam)
+        // --- CAREER START DEMO ---
+        // 1. Create User
+        val myPlayer = CareerEngine.startCareer("User Hero", "ST", "Europe")
+
+        // 2. Find Trial Offers (Day 1)
+        val trialOffers = CareerEngine.generateTrialOffers(myPlayer, leagues)
+
+        // 3. Simulate Signing & Agent Upgrade
+        var signedMessage = "No offers yet."
+        if (trialOffers.isNotEmpty()) {
+            val (team, contract) = trialOffers.first()
+            myPlayer.contract = contract
+            myPlayer.contract!!.signingBonus // Access check
+
+            // Agent gets XP
+            AgentEngine.upgradeAgent(myPlayer.agent!!)
+            signedMessage = "Signed with ${team.name} for $${contract.salary}/week! Agent upgraded to Lvl ${myPlayer.agent!!.level}"
+        }
 
         setContent {
-            SimulationDebugView(leagues, topPlayers, squad.starters)
+            SimulationDebugView(leagues, myPlayer, trialOffers, signedMessage)
         }
     }
 }
 
 @Composable
-fun SimulationDebugView(leagues: List<League>, topPlayers: List<Player>, starters: List<Player>) {
+fun SimulationDebugView(
+    leagues: List<League>,
+    player: Player,
+    offers: List<Pair<Team, Contract>>,
+    status: String
+) {
     LazyColumn {
-        item { Text("Total Leagues: ${leagues.size}") }
-        item { Text("Total Teams: ${leagues.sumOf { it.teams.size }}") }
-        item { Text("Total Players: ${leagues.sumOf { l -> l.teams.sumOf { t -> t.players.size } }}") }
+        item { Text("--- Career Mode Start ---") }
+        item { Text("Player: ${player.name} (${player.position})") }
+        item { Text("Rating: ${String.format("%.1f", player.overallRating)} | Pot: ${String.format("%.1f", player.potential)}") }
+        item { Text("Agent: ${player.agent?.name} (Lvl ${player.agent?.level})") }
 
-        item { Text("--- Top 5 Players ---") }
-        items(topPlayers.take(5)) { player ->
-            Text("${player.name} (${player.position}) - ${String.format("%.1f", player.overallRating)}")
+        item { Text("\n--- Offers Received ---") }
+        if (offers.isEmpty()) {
+            item { Text("No clubs interested. Try training harder!") }
+        } else {
+            items(offers) { (team, contract) ->
+                Text("${team.name} (Tier ${team.leagueId.take(3)}): $${contract.salary}/wk, ${contract.yearsRemaining} yrs")
+            }
         }
 
-        item { Text("--- Example Squad Starters ---") }
-        items(starters) { player ->
-             Text("${player.position}: ${player.name}")
-        }
+        item { Text("\n--- Status ---") }
+        item { Text(status) }
     }
 }
