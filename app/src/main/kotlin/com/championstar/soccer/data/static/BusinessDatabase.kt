@@ -10,12 +10,7 @@ data class Business(
     val weeklyIncome: Long,
     val riskFactor: Double, // 0.0 to 1.0 (Higher is riskier)
     val requiredReputation: Double = 0.0,
-    val currency: Currency = Currency.STAR // Usually bought with cash/stars? Let's assume standard Money for now, but using Star for logic if needed. Actually, businesses usually cost Money.
-    // Re-evaluating: The prompt implies business management. Let's assume they cost "Money" (which we need to track if not already).
-    // Checking Player model: It has `marketValue`, `contract` (salary), but maybe not liquid `cash`?
-    // Memory check: "5 Financial Pillars".
-    // Let's add `cash` to Player model if missing, or use `stars` as a proxy for "Wealth/Lifestyle" points.
-    // For now, let's stick to a generic cost and assume we'll use a `cash` field or similar.
+    val currency: Currency = Currency.STAR
 )
 
 object BusinessDatabase {
@@ -52,4 +47,8 @@ object BusinessDatabase {
         Business("b29", "Private Island", "Ultimate luxury.", 15000000, 0, 0.0), // No income, just flex? Or tourism? Let's say tourism. 400k.
         Business("b30", "Diamond Mine", "Rock solid.", 100000000, 2500000, 0.3)
     )
+
+    fun getBusinessById(id: String): Business? {
+        return businesses.find { it.id == id }
+    }
 }

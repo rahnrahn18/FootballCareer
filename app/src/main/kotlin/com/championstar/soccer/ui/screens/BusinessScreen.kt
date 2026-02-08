@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.championstar.soccer.data.static.Business
 import com.championstar.soccer.data.static.BusinessDatabase
@@ -52,6 +53,42 @@ fun BusinessScreen(
                     business = business,
                     onBuy = { onBuy(business.id) }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun BusinessCard(
+    business: Business,
+    onBuy: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF263238)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(business.name, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(business.description, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                     Text("Income: $${business.weeklyIncome}/wk", color = Color.Green, style = MaterialTheme.typography.labelMedium)
+                     Spacer(modifier = Modifier.width(16.dp))
+                     Text("Risk: ${(business.riskFactor * 100).toInt()}%", color = Color(0xFFFF5722), style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Button(
+                onClick = onBuy,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00ACC1))
+            ) {
+                Text("Buy $${business.cost}")
             }
         }
     }

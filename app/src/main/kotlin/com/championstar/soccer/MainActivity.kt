@@ -21,6 +21,7 @@ import com.championstar.soccer.data.local.GameStorage
 import com.championstar.soccer.data.static.ShopDatabase
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
+import com.championstar.soccer.domain.models.Team
 import com.championstar.soccer.simulation.engine.*
 import com.championstar.soccer.ui.screens.*
 import com.championstar.soccer.ui.theme.ChampionstarTheme
@@ -160,7 +161,6 @@ fun MainGameScreen(
                 BusinessScreen(player, { /* TODO logic */ })
             }
         }
-        // New Screens
         composable("club") {
             FullscreenScreenWithBack(navController) {
                 val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
@@ -171,7 +171,29 @@ fun MainGameScreen(
         composable("sponsors") { FullscreenScreenWithBack(navController) { SponsorScreen() } }
         composable("ranking") { FullscreenScreenWithBack(navController) { RankingScreen() } }
         composable("achievements") { FullscreenScreenWithBack(navController) { AchievementScreen(player) } }
-        composable("match") { FullscreenScreenWithBack(navController) { MatchScreen() } }
+        composable("match") {
+             // For testing, find the player's team and a random opponent.
+             // In a real flow, this would be passed from a "Pre-Match" event.
+             val team = leagues.flatMap { it.teams }.find { t -> t.players.any { it.id == player.id } }
+             val opponent = leagues.flatMap { it.teams }.filter { it.id != team?.id }.randomOrNull()
+
+             if (team != null && opponent != null) {
+                FullscreenScreenWithBack(navController) {
+                    MatchScreen(
+                        player = player,
+                        team = team,
+                        opponent = opponent,
+                        onMatchEnd = { h, a ->
+                            // Go back after match
+                            navController.popBackStack()
+                        }
+                    )
+                }
+             } else {
+                 // Fallback if no team found
+                 LaunchedEffect(Unit) { navController.popBackStack() }
+             }
+        }
     }
 }
 

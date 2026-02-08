@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.championstar.soccer.domain.models.Player
 import com.championstar.soccer.domain.models.Team
 import com.championstar.soccer.simulation.engine.MatchEngine
