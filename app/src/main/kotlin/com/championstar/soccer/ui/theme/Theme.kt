@@ -7,27 +7,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 val DarkColorScheme = darkColorScheme(
-    primary = Gold,
-    secondary = PitchGreen,
-    tertiary = OffWhite,
-    background = SlateBlack,
+    primary = NeonGold,
+    secondary = ElectricGreen,
+    tertiary = BrightBlue,
+    background = CarbonBlack,
     surface = SurfaceDark,
     onPrimary = Color.Black,
-    onSecondary = Color.White,
-    onBackground = OffWhite,
-    onSurface = OffWhite
+    onSecondary = Color.Black,
+    onBackground = TextWhite,
+    onSurface = TextWhite
 )
 
+// Light theme is not really used for "Dark Sporty", but kept for safety mapping
 val LightColorScheme = lightColorScheme(
-    primary = DarkGreen,
-    secondary = Gold,
-    tertiary = SlateBlack,
-    background = OffWhite,
+    primary = ElectricGreen,
+    secondary = NeonGold,
+    tertiary = BrightBlue,
+    background = Color(0xFFF5F5F5),
     surface = Color.White,
     onPrimary = Color.White,
     onSecondary = Color.Black,
-    onBackground = SlateBlack,
-    onSurface = SlateBlack
+    onBackground = Color.Black,
+    onSurface = Color.Black
 )
 
 @Composable
