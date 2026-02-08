@@ -17,7 +17,7 @@ import coil.size.Size
 
 /**
  * A reusable image loader that fetches high-quality placeholders for game assets.
- * Uses specific keywords to get relevant images (e.g., "football", "stadium", "avatar").
+ * Uses Picsum as a reliable fallback since Unsplash Source is deprecated.
  */
 @Composable
 fun GameAssetImage(
@@ -26,9 +26,13 @@ fun GameAssetImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop
 ) {
+    // Generates a consistent random image based on the keyword hash to simulate "persistent" assets
+    val seed = keyword.hashCode()
+    val url = "https://picsum.photos/seed/$seed/400/400"
+
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
-            .data("https://source.unsplash.com/random/400x400/?$keyword")
+            .data(url)
             .size(Size.ORIGINAL)
             .crossfade(true)
             .build()
@@ -53,14 +57,13 @@ fun GameAssetImage(
 
 /**
  * Specifically loads a player avatar based on gender/style if needed.
- * For now, uses a generic "portrait" or "face" keyword.
  */
 @Composable
 fun PlayerAssetImage(
     modifier: Modifier = Modifier
 ) {
     GameAssetImage(
-        keyword = "face,portrait,athlete", // specific keywords for avatars
+        keyword = "player_avatar_placeholder",
         contentDescription = "Player Avatar",
         modifier = modifier
     )
@@ -74,7 +77,7 @@ fun ClubAssetImage(
     modifier: Modifier = Modifier
 ) {
     GameAssetImage(
-        keyword = "shield,crest,logo,sport",
+        keyword = "club_logo_placeholder",
         contentDescription = "Club Logo",
         modifier = modifier
     )
