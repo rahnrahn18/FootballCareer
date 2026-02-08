@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.championstar.soccer">
 
+    <!-- Crucial Permissions for Picsum & Network Access -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -17,6 +21,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.Championstar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

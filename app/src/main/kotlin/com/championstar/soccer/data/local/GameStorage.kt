@@ -1,6 +1,7 @@
 package com.championstar.soccer.data.local
 
 import android.content.Context
+import com.championstar.soccer.domain.models.GameDate
 import com.championstar.soccer.domain.models.League
 import com.championstar.soccer.domain.models.Player
 import com.championstar.soccer.simulation.engine.TimeEngine
@@ -14,7 +15,7 @@ import java.io.FileWriter
 data class GameState(
     val player: Player,
     val leagues: List<League>,
-    val currentDate: String // We will parse this back into TimeEngine
+    val currentDate: GameDate // Stores the actual object, not a string
 )
 
 object GameStorage {
@@ -33,7 +34,7 @@ object GameStorage {
         val gameState = GameState(
             player = player,
             leagues = leagues,
-            currentDate = TimeEngine.currentDate.toString()
+            currentDate = TimeEngine.currentDate
         )
 
         try {
@@ -61,10 +62,9 @@ object GameStorage {
             reader.close()
 
             // IMPORTANT: Restore static TimeEngine state
-            // In a real app, TimeEngine should not be static, but for this architecture we patch it here.
-            // Parse logic would be needed if we want exact restoration, but for now we just load the data.
-            // Ideally, GameDate should be part of the save and injected back.
-            // TimeEngine.currentDate = ... (Need parsing logic if we want to support this perfectly)
+            TimeEngine.currentDate.year = gameState.currentDate.year
+            TimeEngine.currentDate.month = gameState.currentDate.month
+            TimeEngine.currentDate.week = gameState.currentDate.week
 
             gameState
         } catch (e: Exception) {
