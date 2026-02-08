@@ -33,12 +33,12 @@ object EventEngine {
                 "The coach is offering extra sessions after practice. It's grueling work.",
                 listOf(
                     EventChoice("Attend (Cost: 10 Stamina)") { p ->
-                        p.stamina -= 10.0
+                        p.stamina = (p.stamina - 10.0).coerceAtLeast(0.0)
                         p.overallRating += 0.2
                         "Coach is impressed. Skill +0.2, Stamina -10."
                     },
                     EventChoice("Skip and Rest") { p ->
-                        p.stamina += 5.0
+                        p.stamina = (p.stamina + 5.0).coerceAtMost(100.0)
                         "You feel rested. Stamina +5."
                     }
                 )
@@ -49,11 +49,11 @@ object EventEngine {
                 "A senior player criticizes your positioning in training.",
                 listOf(
                     EventChoice("Apologize and Listen") { p ->
-                        p.morale += 2.0
+                        p.morale = (p.morale + 2.0).coerceAtMost(100.0)
                         "He appreciates your humility. Morale +2."
                     },
                     EventChoice("Argue Back") { p ->
-                        p.morale -= 5.0
+                        p.morale = (p.morale - 5.0).coerceAtLeast(0.0)
                         p.reputation += 0.1 // Showing spine?
                         "The locker room is tense. Morale -5, Rep +0.1."
                     }
@@ -70,11 +70,11 @@ object EventEngine {
                     EventChoice("Accept (Cost: $50 for suit)") { p ->
                         // p.money -= 50
                         p.reputation += 0.5
-                        p.morale += 2.0
+                        p.morale = (p.morale + 2.0).coerceAtMost(100.0)
                         "Great exposure! Reputation +0.5."
                     },
                     EventChoice("Decline (Focus on game)") { p ->
-                        p.form += 2.0
+                        p.form = (p.form + 2.0).coerceAtMost(100.0)
                         "Focus remains sharp. Form +2."
                     }
                 )
@@ -88,11 +88,11 @@ object EventEngine {
                 "Your agent suggests pushing for a renewal.",
                 listOf(
                     EventChoice("Demand New Deal") { p ->
-                        p.morale -= 5.0 // Stress
+                        p.morale = (p.morale - 5.0).coerceAtLeast(0.0)
                         "Club is annoyed but listening. Morale -5."
                     },
                     EventChoice("Wait until end of season") { p ->
-                        p.morale += 2.0
+                        p.morale = (p.morale + 2.0).coerceAtMost(100.0)
                         "Focus on football. Morale +2."
                     }
                 )

@@ -70,6 +70,9 @@ object TimeEngine {
                 }
             }
 
+            // Ensure bounds after every week processing
+            sanitizePlayerStats(player)
+
             if (!foundEvent) {
                 currentDate.nextWeek()
             }
@@ -83,6 +86,14 @@ object TimeEngine {
         if (weeksPassed >= 52 && !foundEvent) log.append("⚠️ Advanced 1 year without major events.\n")
 
         return log.toString()
+    }
+
+    private fun sanitizePlayerStats(player: Player) {
+        player.stamina = player.stamina.coerceIn(0.0, 100.0)
+        player.morale = player.morale.coerceIn(0.0, 100.0)
+        player.form = player.form.coerceIn(0.0, 100.0)
+        // Ensure overall rating stays reasonable (though it might exceed 100 slightly in some games, typically 99 max)
+        player.overallRating = player.overallRating.coerceIn(1.0, 99.9)
     }
 
     private fun processWeeklyMaintenance(player: Player) {
@@ -108,7 +119,7 @@ object TimeEngine {
         if (isSelected) {
             // Player was involved
             player.form = (player.form * 0.8 + playerPerf * 10.0 * 0.2).coerceIn(0.0, 100.0)
-            player.stamina -= 15.0
+            player.stamina = (player.stamina - 15.0).coerceAtLeast(0.0)
 
             // Check Achievements
             val unlocked = AchievementEngine.checkAchievements(player, result)

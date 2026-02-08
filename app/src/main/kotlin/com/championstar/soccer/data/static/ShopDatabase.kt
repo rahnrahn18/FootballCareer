@@ -9,9 +9,9 @@ object ShopDatabase {
         // --- STAR ITEMS (20) ---
         // Consumables (Energy/Morale)
         ShopItem("S_01", "Energy Drink", "Restores 20 Stamina instantly.", 1, Currency.STAR) { p -> p.stamina = (p.stamina + 20.0).coerceAtMost(100.0); "Refreshed!" },
-        ShopItem("S_02", "Spa Day", "Restores 50 Stamina and +5 Morale.", 3, Currency.STAR) { p -> p.stamina = (p.stamina + 50.0).coerceAtMost(100.0); p.morale += 5.0; "Relaxing." },
+        ShopItem("S_02", "Spa Day", "Restores 50 Stamina and +5 Morale.", 3, Currency.STAR) { p -> p.stamina = (p.stamina + 50.0).coerceAtMost(100.0); p.morale = (p.morale + 5.0).coerceAtMost(100.0); "Relaxing." },
         ShopItem("S_03", "Sports Psychologist", "Boosts Morale by 20.", 2, Currency.STAR) { p -> p.morale = (p.morale + 20.0).coerceAtMost(100.0); "Mentally sharp." },
-        ShopItem("S_04", "Ice Bath", "Recover 10 Stamina before a match.", 1, Currency.STAR) { p -> p.stamina += 10.0; "Cold but effective." },
+        ShopItem("S_04", "Ice Bath", "Recover 10 Stamina before a match.", 1, Currency.STAR) { p -> p.stamina = (p.stamina + 10.0).coerceAtMost(100.0); "Cold but effective." },
         ShopItem("S_05", "Vacation Ticket", "Max out Morale instantly.", 5, Currency.STAR) { p -> p.morale = 100.0; "Ready to go!" },
 
         // Training (Skill Boosts - Small)
