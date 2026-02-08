@@ -18,15 +18,15 @@ object AchievementEngine {
             if (!player.unlockedAchievements.contains(achievement.id)) {
 
                 val isMet = when (achievement.id) {
-                    "ACH_01" -> player.goals >= 1
+                    "ACH_01" -> player.seasonStats.goals >= 1
                     "ACH_02" -> recentMatch != null && calculateMatchGoals(player, recentMatch) >= 3
-                    "ACH_03" -> player.goals >= 20 // Ideally seasonal goals, but using career for simplicity now
-                    "ACH_04" -> player.goals >= 100
-                    "ACH_05" -> player.goals >= 500
-                    "ACH_06" -> player.appearances >= 1
-                    "ACH_07" -> player.appearances >= 10 // Simplified check
-                    "ACH_08" -> player.appearances >= 50
-                    "ACH_09" -> player.appearances >= 200
+                    "ACH_03" -> player.seasonStats.goals >= 20 // Ideally seasonal goals, but using career for simplicity now
+                    "ACH_04" -> player.seasonStats.goals >= 100
+                    "ACH_05" -> player.seasonStats.goals >= 500
+                    "ACH_06" -> player.seasonStats.appearances >= 1
+                    "ACH_07" -> player.seasonStats.appearances >= 10 // Simplified check
+                    "ACH_08" -> player.seasonStats.appearances >= 50
+                    "ACH_09" -> player.seasonStats.appearances >= 200
 
                     "ACH_10" -> player.contract != null
                     "ACH_11" -> player.contract != null && player.contract!!.salary > 500 // Proxy for Tier 3
@@ -35,7 +35,7 @@ object AchievementEngine {
 
                     "ACH_15" -> player.form > 90.0 // Proxy for high rating
                     "ACH_16" -> player.form >= 99.0
-                    "ACH_17" -> player.assists >= 3 // Career assists for now
+                    "ACH_17" -> player.seasonStats.assists >= 3 // Career assists for now
 
                     "ACH_22" -> player.agent != null && player.agent!!.level >= 10
                     "ACH_23" -> player.age >= 34
