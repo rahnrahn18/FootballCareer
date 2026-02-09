@@ -2,6 +2,7 @@ package com.championstar.soccer.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,10 +19,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.championstar.soccer.core.Localization
 import com.championstar.soccer.domain.models.Player
 import com.championstar.soccer.simulation.engine.GameTurnEvent
+import com.championstar.soccer.simulation.engine.LeagueEngine
 import com.championstar.soccer.ui.components.GloryCurrency
 import com.championstar.soccer.ui.components.PlayerAssetImage
 import com.championstar.soccer.ui.components.StarCurrency
@@ -39,12 +43,11 @@ fun DashboardScreen(
     onNavigateToTraining: () -> Unit,
     onSaveAndExit: () -> Unit
 ) {
-    // Local Event History (In a real app, this should be in ViewModel/Model)
-    // We add to this when an event is dismissed
-    val eventHistory = remember { mutableStateListOf<String>("Welcome to your career! Season started.") }
+    // Local Event History (Should persist in GameState ideally)
+    val eventHistory = remember { mutableStateListOf<String>("Season started. Good luck!") }
 
-    // When an event is completed, we might want to log it.
-    // However, onEventCompleted is a callback. We can intercept it in the UI logic below.
+    // News Ticker
+    var newsHeadlines by remember { mutableStateOf(listOf<String>()) }
 
     Column(
         modifier = Modifier
@@ -73,12 +76,12 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.width(32.dp))
 
-            // Navigation Icons (Top Right, Tight & Small)
+            // Navigation Icons
             NavigationIconRow(
                 onLeague = onNavigateToLeague,
                 onShop = onNavigateToShop,
                 onBusiness = onNavigateToBusiness,
-                onSquad = onNavigateToTraining, // Replaced Squad with Training
+                onSquad = onNavigateToTraining,
                 onTransfer = { /* TODO */ },
                 onExit = onSaveAndExit
             )
@@ -88,7 +91,8 @@ fun DashboardScreen(
 
         // --- MAIN CONTENT ---
         Row(modifier = Modifier.fillMaxSize()) {
-            // LEFT: Player Profile (30%)
+
+            // LEFT PANEL: Player & Status (30%)
             Column(
                 modifier = Modifier
                     .weight(0.3f)
@@ -114,28 +118,54 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Stats
-                StatRow("Overall Rating", String.format("%.1f", player.overallRating), Color(0xFFFFD700))
+                StatRow("Rating", String.format("%.1f", player.overallRating), Color(0xFFFFD700))
                 Spacer(modifier = Modifier.height(8.dp))
                 StatRow("Form", String.format("%.0f", player.form), if(player.form > 80) Color.Green else Color.White)
                 Spacer(modifier = Modifier.height(8.dp))
                 StatRow("Stamina", "${player.stamina.toInt()}%", if(player.stamina < 30) Color.Red else Color.Cyan)
+                Spacer(modifier = Modifier.height(8.dp))
+                StatRow("Morale", "${player.morale.toInt()}%", Color.Magenta)
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Team Logo / Name placeholder
+                Divider(color = Color.DarkGray)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Current Club Info
                 Text("Current Club", color = Color.Gray, fontSize = 12.sp)
-                Text("Free Agent", color = Color.White, fontWeight = FontWeight.Bold) // Ideally fetch team name
+                // In real app, pass Club Name
+                Text("My Club", color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // RIGHT: Event Log & Actions (70%)
+            // CENTER/RIGHT PANEL: Interaction & Info (70%)
             Column(
                 modifier = Modifier
                     .weight(0.7f)
                     .fillMaxHeight()
             ) {
-                // Event Box (History or Active Event)
+                // 1. News Ticker (New Feature)
+                if (newsHeadlines.isNotEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2C)),
+                        modifier = Modifier.fillMaxWidth().height(40.dp).padding(bottom = 8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+                            Text("BREAKING NEWS:", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                newsHeadlines.first(),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                // 2. Main Interaction Area
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -148,20 +178,13 @@ fun DashboardScreen(
                         EventInteractionView(
                             event = currentEvent,
                             player = player,
-                                onDismiss = { resultMsg ->
-                                // Add summary to history
-                                    val summary = resultMsg ?: when(currentEvent) {
-                                    is GameTurnEvent.MatchEvent -> "Match vs ${currentEvent.opponentName}: ${currentEvent.resultText}"
-                                    is GameTurnEvent.RoutineEvent -> currentEvent.weekSummary
-                                    is GameTurnEvent.StoryEvent -> "Decision made."
-                                        is GameTurnEvent.SeasonEndEvent -> "Season Ended."
-                                }
-                                eventHistory.add(0, "${currentDate}: $summary")
+                            onDismiss = { resultMsg ->
+                                if (resultMsg != null) eventHistory.add(0, "$currentDate: $resultMsg")
                                 onEventCompleted()
                             }
                         )
                     } else {
-                        // EVENT HISTORY LIST
+                        // EVENT HISTORY / DASHBOARD VIEW
                         Column {
                             Text(
                                 "ACTIVITY LOG",
@@ -189,9 +212,14 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Advance Button
+                // 3. Action Button (Advance)
                 Button(
-                    onClick = onAdvanceTime,
+                    onClick = {
+                        // Clear old news before advancing
+                        newsHeadlines = emptyList()
+                        onAdvanceTime()
+                        // Note: In real implementation, news would be populated AFTER advanceTime returns via a state update or effect
+                    },
                     enabled = currentEvent == null,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -206,12 +234,68 @@ fun DashboardScreen(
                         Icon(Icons.Filled.FastForward, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "ADVANCE TO NEXT WEEK",
+                            "ADVANCE DAY", // Changed from "Week" to "Day"
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun EventInteractionView(
+    event: GameTurnEvent,
+    player: Player,
+    onDismiss: (String?) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (event) {
+            is GameTurnEvent.StoryEvent -> {
+                Text(event.title, style = MaterialTheme.typography.headlineSmall, color = Color(0xFFFFD700))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(event.description, style = MaterialTheme.typography.bodyLarge, color = Color.White, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(24.dp))
+                event.choices.forEach { choice ->
+                    Button(
+                        onClick = {
+                            val msg = choice.consequence(player)
+                            onDismiss(msg)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Text(choice.text)
+                    }
+                }
+            }
+            is GameTurnEvent.MatchEvent -> {
+                // Match Day - Navigate to Match Screen
+                Text("MATCH DAY", style = MaterialTheme.typography.displayMedium, color = Color.White)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("vs ${event.opponentName}", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFFFD700))
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(onClick = { onDismiss("Playing Match vs ${event.opponentName}...") }) {
+                    Text("PLAY MATCH", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            is GameTurnEvent.RoutineEvent -> {
+                Text(event.message, style = MaterialTheme.typography.bodyLarge, color = Color.LightGray)
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = { onDismiss(event.message) }) { Text("Continue") }
+            }
+            is GameTurnEvent.SeasonEndEvent -> {
+                Text("SEASON COMPLETED", style = MaterialTheme.typography.headlineMedium, color = Color.Red)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Age: ${event.age}", color = Color.White)
+                if(event.isRetired) Text("RETIRED", color = Color.Red, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = { onDismiss("Season Ended") }) { Text("Next Season") }
             }
         }
     }
@@ -255,62 +339,5 @@ fun StatRow(label: String, value: String, color: Color) {
     ) {
         Text(label, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
         Text(value, color = color, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun EventInteractionView(
-    event: GameTurnEvent,
-    player: Player,
-    onDismiss: (String?) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        when (event) {
-            is GameTurnEvent.StoryEvent -> {
-                Text(event.title, style = MaterialTheme.typography.headlineSmall, color = Color(0xFFFFD700))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(event.description, style = MaterialTheme.typography.bodyLarge, color = Color.White, textAlign = TextAlign.Center)
-                Spacer(modifier = Modifier.height(24.dp))
-                event.choices.forEach { choice ->
-                    Button(
-                        onClick = {
-                            val msg = choice.consequence(player)
-                            onDismiss(msg)
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        Text(choice.text)
-                    }
-                }
-            }
-            is GameTurnEvent.MatchEvent -> {
-                Text("MATCH FINISHED", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(event.resultText, style = MaterialTheme.typography.displaySmall, color = Color(0xFFFFD700))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Your Rating: ${event.rating}  Goals: ${event.goals}", color = Color.Cyan)
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { onDismiss(null) }) { Text("Continue") }
-            }
-            is GameTurnEvent.RoutineEvent -> {
-                Text("WEEKLY REPORT", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(event.weekSummary, color = Color.LightGray)
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { onDismiss(null) }) { Text("Continue") }
-            }
-            is GameTurnEvent.SeasonEndEvent -> {
-                Text("SEASON COMPLETED", style = MaterialTheme.typography.headlineMedium, color = Color.Red)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Age: ${event.age}", color = Color.White)
-                if(event.isRetired) Text("RETIRED", color = Color.Red, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { onDismiss(null) }) { Text("Next Season") }
-            }
-        }
     }
 }
