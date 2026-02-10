@@ -4,12 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.championstar.soccer.core.Language
+import com.championstar.soccer.core.Localization
 import com.championstar.soccer.ui.components.ClubAssetImage
 
 @Composable
@@ -18,6 +20,9 @@ fun MainMenuScreen(
     onNewGame: () -> Unit,
     onLoadGame: () -> Unit
 ) {
+    // Local state to trigger recomposition when language changes
+    var currentLang by remember { mutableStateOf(Localization.currentLanguage) }
+
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -59,15 +64,26 @@ fun MainMenuScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            MenuButton("NEW CAREER", Color(0xFF4CAF50), onNewGame)
+            MenuButton(Localization.get(Localization.MENU_NEW_GAME), Color(0xFF4CAF50), onNewGame)
+
             Spacer(modifier = Modifier.height(16.dp))
+
             if (hasSaveGame) {
-                MenuButton("CONTINUE CAREER", Color(0xFF00ACC1), onLoadGame)
+                MenuButton(Localization.get(Localization.MENU_CONTINUE), Color(0xFF00ACC1), onLoadGame)
             } else {
-                MenuButton("CONTINUE CAREER (Locked)", Color.Gray, {}, enabled = false)
+                MenuButton(Localization.get(Localization.MENU_CONTINUE_LOCKED), Color.Gray, {}, enabled = false)
             }
+
             Spacer(modifier = Modifier.height(16.dp))
-            MenuButton("SETTINGS", Color.Gray, {}) // Placeholder
+
+            // Language Toggle / Settings
+            // For now, acting as a direct language switch for better UX in prototype
+            val langButtonText = if (currentLang == Language.EN) "Language: English" else "Bahasa: Indonesia"
+            MenuButton(langButtonText, Color(0xFF757575), {
+                val newLang = if (currentLang == Language.EN) Language.ID else Language.EN
+                Localization.setLanguage(newLang)
+                currentLang = newLang
+            })
         }
     }
 }

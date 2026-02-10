@@ -3,7 +3,10 @@ package com.championstar.soccer.ui.screens
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,16 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.championstar.soccer.core.Localization
 import com.championstar.soccer.domain.models.Player
 import com.championstar.soccer.domain.models.Team
 import com.championstar.soccer.domain.models.EventType
 import com.championstar.soccer.simulation.engine.MatchEngine
 import com.championstar.soccer.simulation.engine.SquadEngine
-import com.championstar.soccer.ui.components.ClubAssetImage
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
@@ -44,6 +47,12 @@ fun MatchScreen(
     var currentDecision by remember { mutableStateOf<MatchEngine.DecisionContext?>(null) }
     var isStarter by remember { mutableStateOf(false) }
 
+    // Speed Control (1000ms = 1x, 500ms = 2x)
+    var simulationSpeed by remember { mutableLongStateOf(1000L) }
+
+    // Substitution UI
+    var showSubDialog by remember { mutableStateOf(false) }
+
     // Decision Logic
     val decisionMinutes = remember {
         val count = Random.nextInt(4, 8) // 4 to 7
@@ -55,14 +64,19 @@ fun MatchScreen(
     }
 
     // Simulation Loop
-    LaunchedEffect(matchState) {
+    LaunchedEffect(matchState, simulationSpeed) {
         if (matchState == MatchState.IN_PROGRESS) {
-            while (interactiveState.minute < 90) {
-                delay(150) // Simulation speed
+            while (!interactiveState.isFinished) {
+                if (showSubDialog) {
+                    delay(500) // Pause/Slow loop while dialog open (or use separate pause state)
+                    continue
+                }
 
-                // Check for User Decision
-                if (isStarter && decisionMinutes.contains(interactiveState.minute + 1)) {
-                    // Pause for decision
+                delay(simulationSpeed)
+
+                // Check for User Decision (Only if user is in lineup)
+                val userInLineup = interactiveState.homeLineup.any { it.id == player.id }
+                if (userInLineup && decisionMinutes.contains(interactiveState.minute + 1)) {
                     val posGroup = if (player.position.contains("F") || player.position == "ST") "FW"
                                    else if (player.position.contains("M")) "MF"
                                    else if (player.position.contains("B")) "DF"
@@ -78,14 +92,12 @@ fun MatchScreen(
 
                 // Process Events for Log
                 events.forEach { event ->
-                    val color = if (event.type == EventType.GOAL) "GOAL" else "Event"
                     log.add(0, "Min ${event.minute}: ${event.description}")
                 }
-            }
 
-            if (interactiveState.minute >= 90) {
-                matchState = MatchState.FULL_TIME
-                MatchEngine.finalizeInteractiveMatch(interactiveState)
+                if (interactiveState.isFinished) {
+                    matchState = MatchState.FULL_TIME
+                }
             }
         }
     }
@@ -111,8 +123,8 @@ fun MatchScreen(
                     }
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    val squad = SquadEngine.selectMatchSquad(team)
-                    isStarter = squad.starters.any { it.id == player.id }
+                    // Check if user is in initial lineup
+                    isStarter = interactiveState.homeLineup.any { it.id == player.id }
 
                     Text(
                         if (isStarter) "You are in the STARTING XI!" else "You are on the BENCH.",
@@ -132,8 +144,40 @@ fun MatchScreen(
             }
             MatchState.IN_PROGRESS, MatchState.DECISION_TIME -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Scoreboard
-                    Scoreboard(interactiveState)
+                    // Header: Scoreboard + Speed Control
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Scoreboard(interactiveState, Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        // Speed Controls & Subs
+                        Row {
+                             Button(
+                                onClick = { showSubDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA000)),
+                                modifier = Modifier.height(60.dp),
+                                enabled = interactiveState.homeSubsUsed < 5
+                            ) { Text("SUB (${interactiveState.homeSubsUsed}/5)") }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Button(
+                                onClick = { simulationSpeed = 1000L },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (simulationSpeed == 1000L) MaterialTheme.colorScheme.primary else Color.DarkGray
+                                ),
+                                modifier = Modifier.height(60.dp)
+                            ) { Text("1x") }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Button(
+                                onClick = { simulationSpeed = 500L },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (simulationSpeed == 500L) MaterialTheme.colorScheme.primary else Color.DarkGray
+                                ),
+                                modifier = Modifier.height(60.dp)
+                            ) { Text("2x") }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -166,14 +210,16 @@ fun MatchScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(100.dp),
+                            .height(120.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF212121))
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text("Live Commentary", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Divider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 4.dp))
-                            log.take(4).forEach {
-                                Text(it, color = Color.White, fontSize = 12.sp)
+                        LazyColumn(
+                            modifier = Modifier.padding(8.dp),
+                            reverseLayout = false
+                        ) {
+                            items(log) { item ->
+                                Text(item, color = Color.White, fontSize = 12.sp)
+                                Divider(color = Color.DarkGray, thickness = 0.5.dp)
                             }
                         }
                     }
@@ -186,9 +232,113 @@ fun MatchScreen(
                 ) {
                     Text("FULL TIME", style = MaterialTheme.typography.displayMedium, color = Color.White)
                     Text("${interactiveState.homeScore} - ${interactiveState.awayScore}", style = MaterialTheme.typography.displayLarge, color = Color(0xFFFFD700))
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Stats
+                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF212121))) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            val totalTicks = (interactiveState.homePossessionTicks + interactiveState.awayPossessionTicks).toFloat()
+                            val homePoss = if(totalTicks > 0) ((interactiveState.homePossessionTicks / totalTicks) * 100).toInt() else 50
+                            val awayPoss = 100 - homePoss
+
+                            StatRow(Localization.get(Localization.STAT_POSSESSION), "$homePoss%", "$awayPoss%")
+                            StatRow(Localization.get(Localization.STAT_SHOTS), "${interactiveState.homeShots}", "${interactiveState.awayShots}")
+                            StatRow(Localization.get(Localization.STAT_ON_TARGET), "${interactiveState.homeOnTarget}", "${interactiveState.awayOnTarget}")
+                            StatRow(Localization.get(Localization.STAT_FOULS), "${interactiveState.homeFouls}", "${interactiveState.awayFouls}")
+                            StatRow(Localization.get(Localization.STAT_CARDS), "${interactiveState.homeYellows}/${interactiveState.homeReds}", "${interactiveState.awayYellows}/${interactiveState.awayReds}")
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(32.dp))
                     Button(onClick = { onMatchEnd(interactiveState.homeScore, interactiveState.awayScore) }) {
                         Text("Continue")
+                    }
+                }
+            }
+        }
+
+        if (showSubDialog) {
+            SubstitutionDialog(
+                state = interactiveState,
+                onDismiss = { showSubDialog = false },
+                onConfirm = { inP, outP ->
+                    MatchEngine.performSubstitution(interactiveState, team, outP.id, inP.id)
+                    log.add(0, "Min ${interactiveState.minute}: SUB ${inP.name} IN, ${outP.name} OUT")
+                    showSubDialog = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SubstitutionDialog(
+    state: MatchEngine.InteractiveMatchState,
+    onDismiss: () -> Unit,
+    onConfirm: (Player, Player) -> Unit
+) {
+    var selectedIn by remember { mutableStateOf<Player?>(null) }
+    var selectedOut by remember { mutableStateOf<Player?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF333333))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("SUBSTITUTION", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.weight(1f)) {
+                    // Bench (IN)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("BENCH (IN)", color = Color.Green, fontWeight = FontWeight.Bold)
+                        LazyColumn {
+                            items(state.homeBench) { p ->
+                                Text(
+                                    "${p.position} ${p.name}",
+                                    color = if (selectedIn == p) Color.Green else Color.White,
+                                    modifier = Modifier
+                                        .clickable { selectedIn = p }
+                                        .padding(4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Lineup (OUT)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("PITCH (OUT)", color = Color.Red, fontWeight = FontWeight.Bold)
+                        LazyColumn {
+                            items(state.homeLineup) { p ->
+                                Text(
+                                    "${p.position} ${p.name} (${state.playerStamina[p.id]?.toInt()}%)",
+                                    color = if (selectedOut == p) Color.Red else Color.White,
+                                    modifier = Modifier
+                                        .clickable { selectedOut = p }
+                                        .padding(4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { if (selectedIn != null && selectedOut != null) onConfirm(selectedIn!!, selectedOut!!) },
+                        enabled = selectedIn != null && selectedOut != null
+                    ) {
+                        Text("Confirm")
                     }
                 }
             }
@@ -197,10 +347,22 @@ fun MatchScreen(
 }
 
 @Composable
-fun Scoreboard(state: MatchEngine.InteractiveMatchState) {
+fun StatRow(label: String, homeVal: String, awayVal: String) {
+    Row(
+        modifier = Modifier.width(300.dp).padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(homeVal, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(label, color = Color.Gray)
+        Text(awayVal, color = Color.White, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun Scoreboard(state: MatchEngine.InteractiveMatchState, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF212121)),
-        modifier = Modifier.fillMaxWidth().height(60.dp)
+        modifier = modifier.height(60.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -257,11 +419,8 @@ fun DecisionOverlay(
 @Composable
 fun MatchVisualizer(state: MatchEngine.InteractiveMatchState) {
     // Determine target based on possession
-    // Home attacks Right (>), Away attacks Left (<)
-    val isHomePossession = state.homePossessionTicks > state.awayPossessionTicks // Rough approximation for this frame
+    val isHomePossession = state.homePossessionTicks > state.awayPossessionTicks // Rough approximation
 
-    // Animate Ball Position
-    // We use a simple infinite transition that oscillates or moves based on state
     val infiniteTransition = rememberInfiniteTransition(label = "ball")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -277,43 +436,28 @@ fun MatchVisualizer(state: MatchEngine.InteractiveMatchState) {
         val w = size.width
         val h = size.height
 
-        // Draw Pitch Lines
         val lineColor = Color.White.copy(alpha = 0.5f)
-
-        // Center Line
         drawLine(lineColor, Offset(w/2, 0f), Offset(w/2, h))
         drawCircle(lineColor, radius = h*0.15f, center = Offset(w/2, h/2), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
-
-        // Goals (Boxes)
         drawRect(lineColor, topLeft = Offset(0f, h*0.3f), size = androidx.compose.ui.geometry.Size(w*0.1f, h*0.4f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
         drawRect(lineColor, topLeft = Offset(w*0.9f, h*0.3f), size = androidx.compose.ui.geometry.Size(w*0.1f, h*0.4f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
 
-        // Players (Dots) - Randomly scattered but clustered
-        // Home (Red) Left side mostly
-        // Away (Blue) Right side mostly
-
-        // Use a seed from minute to make them "move" every tick
         val random = Random(state.minute)
 
-        // Home Players
         repeat(10) {
-            val x = random.nextFloat() * w * 0.8f // Mostly left
+            val x = random.nextFloat() * w * 0.8f
             val y = random.nextFloat() * h
             drawCircle(Color.Red, radius = 8f, center = Offset(x, y))
         }
 
-        // Away Players
         repeat(10) {
-            val x = w - (random.nextFloat() * w * 0.8f) // Mostly right
+            val x = w - (random.nextFloat() * w * 0.8f)
             val y = random.nextFloat() * h
             drawCircle(Color.Blue, radius = 8f, center = Offset(x, y))
         }
 
-        // Ball (Yellow)
-        // Position depends on minute/possession
         val ballX = if (isHomePossession) w * 0.7f + pulse else w * 0.3f - pulse
         val ballY = h * 0.5f + (random.nextFloat() - 0.5f) * h * 0.5f
-
         drawCircle(Color.Yellow, radius = 6f, center = Offset(ballX, ballY))
     }
 }
